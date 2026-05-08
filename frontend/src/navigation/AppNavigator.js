@@ -1,9 +1,12 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+
+// Importaciones existentes
 import HomeScreen from '../screens/HomeScreen';
 import LoginScreen from '../screens/LoginScreen';
-import RegisterScreen from '../screens/RegisterScreen'; // 👈 NUEVO
+import RegisterScreen from '../screens/RegisterScreen';
 import DashboardScreen from '../screens/DashboardScreen';
+import ClasesListScreen from '../screens/ClasesListScreen'; 
 
 const Stack = createNativeStackNavigator();
 
@@ -29,7 +32,6 @@ export default function AppNavigator() {
         }}
       />
 
-      {/* 👇 NUEVA PANTALLA */}
       <Stack.Screen 
         name="Register" 
         component={RegisterScreen}
@@ -42,10 +44,20 @@ export default function AppNavigator() {
       />
       
       <Stack.Screen
-  name="Dashboard"
-  component={DashboardScreen}
-/>
+        name="Dashboard"
+        component={DashboardScreen}
+      />
+
+      {/* --- NUEVA RUTA REGISTRADA --- */}
+      <Stack.Screen
+        name="ClasesList"
+        component={ClasesListScreen}
+      />
+
+      <Stack.Screen 
+      name="DetalleMateria" 
+      component={DetalleMateriaScreen} />
+
     </Stack.Navigator>
-    
   );
 }

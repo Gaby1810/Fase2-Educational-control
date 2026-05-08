@@ -12,158 +12,103 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 
-export default function DashboardScreen() {
+export default function DashboardScreen({ navigation }) { // <--- Agregado navigation
 
   const cards = [
     {
       title: "Total clases",
       desc: "Explora tus materias y accede a todo tu contenido académico.",
       image: "https://cdn-icons-png.flaticon.com/512/3135/3135755.png",
-      icon: "book-open-page-variant"
+      icon: "book-open-page-variant",
+      route: "ClasesList" // <--- Ruta de navegación
     },
     {
       title: "Total estudiantes",
       desc: "Comparte tu experiencia con tus compañeros.",
       image: "https://cdn-icons-png.flaticon.com/512/201/201818.png",
-      icon: "account-group"
+      icon: "account-group",
+      route: "Asistencia" 
     },
     {
       title: "Tareas activas",
       desc: "Mantente al día con tus deberes y entregas.",
       image: "https://cdn-icons-png.flaticon.com/512/4341/4341139.png",
-      icon: "clipboard-text"
+      icon: "clipboard-text",
+      route: "Tareas"
     },
     {
       title: "Promedio general",
       desc: "Visualiza tu progreso académico fácilmente.",
       image: "https://cdn-icons-png.flaticon.com/512/3135/3135789.png",
-      icon: "chart-bar"
+      icon: "chart-bar",
+      route: "Notas"
     }
   ];
 
   return (
     <SafeAreaView style={styles.container}>
-
-      {/* HEADER */}
       <View style={styles.header}>
-
-        <TouchableOpacity style={styles.headerBtn}>
-          <MaterialCommunityIcons
-            name="chevron-left"
-            size={28}
-            color="#fff"
-          />
+        <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.goBack()}>
+          <MaterialCommunityIcons name="chevron-left" size={28} color="#fff" />
         </TouchableOpacity>
-
         <TouchableOpacity>
-          <MaterialCommunityIcons
-            name="bell-outline"
-            size={24}
-            color="#fff"
-          />
+          <MaterialCommunityIcons name="bell-outline" size={24} color="#fff" />
         </TouchableOpacity>
-
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-
-        {/* BANNER */}
         <View style={styles.bannerContainer}>
           <Image
-            source={{
-              uri: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f'
-            }}
+            source={{ uri: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f' }}
             style={styles.banner}
           />
-
           <View style={styles.overlay}>
-            <Text style={styles.bannerTitle}>
-              Bienvenido a Educational Control
-            </Text>
+            <Text style={styles.bannerTitle}>Bienvenido a Educational Control</Text>
           </View>
         </View>
 
-        {/* CARDS */}
         <View style={styles.cardsContainer}>
-
           {cards.map((item, index) => (
-
-            <View key={index} style={styles.card}>
-
-              <Image
-                source={{ uri: item.image }}
-                style={styles.cardImage}
-              />
-
+            <TouchableOpacity 
+              key={index} 
+              style={styles.card}
+              onPress={() => item.route && navigation.navigate(item.route)} // <--- VÍNCULO REAL
+            >
+              <Image source={{ uri: item.image }} style={styles.cardImage} />
               <View style={styles.cardContent}>
-
                 <View style={styles.cardTitleRow}>
-                  <MaterialCommunityIcons
-                    name={item.icon}
-                    size={18}
-                    color={Colors.primary}
-                  />
-
-                  <Text style={styles.cardTitle}>
-                    {item.title}
-                  </Text>
+                  <MaterialCommunityIcons name={item.icon} size={18} color={Colors.primary} />
+                  <Text style={styles.cardTitle}>{item.title}</Text>
                 </View>
-
-                <Text style={styles.cardDesc}>
-                  {item.desc}
-                </Text>
-
+                <Text style={styles.cardDesc}>{item.desc}</Text>
               </View>
-
-            </View>
-
+            </TouchableOpacity>
           ))}
-
         </View>
-
       </ScrollView>
 
-      {/* NAVBAR */}
+      {/* NAVBAR VINCULADO */}
       <View style={styles.bottomNav}>
-
-        <TouchableOpacity style={styles.navItem}>
-          <MaterialCommunityIcons
-            name="home-outline"
-            size={24}
-            color={Colors.primary}
-          />
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Dashboard')}>
+          <MaterialCommunityIcons name="home-outline" size={24} color={Colors.primary} />
           <Text style={styles.navTextActive}>Inicio</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.navItem}>
-          <MaterialCommunityIcons
-            name="book-outline"
-            size={24}
-            color="#777"
-          />
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('ClasesList')}>
+          <MaterialCommunityIcons name="book-outline" size={24} color="#777" />
           <Text style={styles.navText}>Clases</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.navItem}>
-          <MaterialCommunityIcons
-            name="clipboard-account-outline"
-            size={24}
-            color="#777"
-          />
+          <MaterialCommunityIcons name="clipboard-account-outline" size={24} color="#777" />
           <Text style={styles.navText}>Estudiantes</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.navItem}>
-          <MaterialCommunityIcons
-            name="account-outline"
-            size={24}
-            color="#777"
-          />
+          <MaterialCommunityIcons name="account-outline" size={24} color="#777" />
           <Text style={styles.navText}>Perfil</Text>
         </TouchableOpacity>
-
       </View>
-
     </SafeAreaView>
   );
 }
