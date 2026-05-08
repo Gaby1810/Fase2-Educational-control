@@ -51,6 +51,7 @@ export default function HomeScreen({ navigation }) {
             <TouchableOpacity
               style={styles.primaryButton}
               activeOpacity={0.8}
+              onPress={() => navigation.navigate('Register')}
             >
               <Text style={styles.primaryButtonText}>Crear cuenta</Text>
             </TouchableOpacity>

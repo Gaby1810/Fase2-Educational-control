@@ -2,6 +2,7 @@ import API_BASE_URL from '../constants/api';
 
 const request = async (endpoint, options = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;
+
   const config = {
     headers: { 'Content-Type': 'application/json' },
     ...options,
@@ -17,9 +18,8 @@ const request = async (endpoint, options = {}) => {
   return data;
 };
 
-export const get = (endpoint) => request(endpoint);
 export const post = (endpoint, body) =>
-  request(endpoint, { method: 'POST', body: JSON.stringify(body) });
-export const put = (endpoint, body) =>
-  request(endpoint, { method: 'PUT', body: JSON.stringify(body) });
-export const del = (endpoint) => request(endpoint, { method: 'DELETE' });
+  request(endpoint, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
