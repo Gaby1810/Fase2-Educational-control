@@ -4,13 +4,16 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 
 export default function DetalleMateriaScreen({ route, navigation }) {
-  // Recibimos los datos de la clase desde la navegación
   const { clase } = route.params;
 
-  const MenuButton = ({ icon, label, screen, color = Colors.primary }) => (
+  const MenuButton = ({ icon, label, screen, color = Colors.primary, params = {} }) => (
     <TouchableOpacity 
       style={[styles.menuItem, { backgroundColor: Colors.surfaceContainerLow }]}
-      onPress={() => navigation.navigate(screen, { claseId: clase.id, nombreClase: clase.nombre })}
+      onPress={() => navigation.navigate(screen, { 
+        claseId: clase.id, 
+        nombreClase: clase.nombre,
+        ...params 
+      })}
     >
       <View style={[styles.menuIconBox, { backgroundColor: color }]}>
         <MaterialCommunityIcons name={icon} size={28} color={Colors.onPrimary} />
@@ -21,6 +24,7 @@ export default function DetalleMateriaScreen({ route, navigation }) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: Colors.background }]}>
+      {/* HEADER */}
       <View style={[styles.header, { backgroundColor: Colors.surfaceContainerHighest }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color={Colors.primary} />
@@ -39,13 +43,39 @@ export default function DetalleMateriaScreen({ route, navigation }) {
 
         <Text style={[styles.sectionTitle, { color: Colors.onSurfaceVariant }]}>Panel de Control</Text>
 
-        {/* Grid de Botones */}
+        {/* Grid de Botones con las rutas corregidas */}
         <View style={styles.menuGrid}>
-          <MenuButton icon="account-group" label="Estudiantes" screen="Asistencia" />
-          <MenuButton icon="file-document-edit" label="Notas" screen="ListadoAlumnos" />
-          <MenuButton icon="clipboard-list" label="Tareas" screen="Tareas" />
-          <MenuButton icon="calendar-check" label="Asistencia" screen="Asistencia" color={Colors.secondary} />
-          <MenuButton icon="folder-open" label="Materiales" screen="Materiales" color={Colors.tertiary} />
+          {/* Asistencia */}
+          <MenuButton 
+            icon="calendar-check" 
+            label="Asistencia" 
+            screen="Asistencia" 
+            color={Colors.secondary} 
+          />
+          
+          {/* Notas (Pasa por Tareas para seleccionar qué calificar) */}
+          <MenuButton 
+            icon="file-document-edit" 
+            label="Notas" 
+            screen="Tareas" 
+            color={Colors.primary} 
+          />
+
+          {/* Gestión de Tareas */}
+          <MenuButton 
+            icon="clipboard-list" 
+            label="Tareas" 
+            screen="Tareas" 
+            color={Colors.primary} 
+          />
+
+          {/* Materiales de Apoyo */}
+          <MenuButton 
+            icon="folder-open" 
+            label="Materiales" 
+            screen="Materiales" 
+            color={Colors.tertiary} 
+          />
         </View>
       </ScrollView>
     </SafeAreaView>

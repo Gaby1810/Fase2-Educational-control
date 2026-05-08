@@ -1,33 +1,49 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const db = require("../db");
+const db = require('../db');
 
-router.post("/crear", (req, res) => {
-   
-    const { nombre, grado, seccion, docente_id } = req.body;
+router.get('/:claseId/tareas', (req, res) => {
+    const sql = "SELECT * FROM tareas WHERE clase_id = ? ORDER BY fecha_entrega ASC";
+    db.query(sql, [req.params.claseId], (err, rows) => {
+        if (err) return res.status(500).json({ error: "Error al obtener tareas" });
+        res.json(rows);
+    });
+});
 
-    const codigo_clase = Math.random().toString(36).substring(2, 8).toUpperCase();
+router.post('/tareas/crear', (req, res) => {
+    const { clase_id, titulo, instrucciones, fecha_entrega } = req.body;
+    const sql = "INSERT INTO tareas (titulo, instrucciones, fecha_entrega, clase_id) VALUES (?, ?, ?, ?)";
+    
+    db.query(sql, [titulo, instrucciones, fecha_entrega, clase_id], (err, result) => {
+        if (err) return res.status(500).json({ error: "Error al crear tarea" });
+        res.json({ id: result.insertId, message: "Tarea creada" });
+    });
+});
 
+router.get('/tareas/:tareaId/seguimiento', (req, res) => {
+    const { tareaId } = req.params;
+    
     const sql = `
-        INSERT INTO clases (nombre, codigo_clase, grado, seccion, docente_id) 
-        VALUES (?, ?, ?, ?, ?)
+        SELECT 
+            u.id, u.nombre, 
+            et.archivo AS archivo_entrega, 
+            et.fecha_entrega,
+            n.calificacion
+        FROM usuarios u
+        INNER JOIN inscripciones i ON u.id = i.estudiante_id
+        INNER JOIN tareas t ON i.clase_id = t.clase_id
+        LEFT JOIN entrega_tareas et ON t.id = et.tarea_id AND u.id = et.estudiante_id
+        LEFT JOIN notas n ON t.clase_id = n.clase_id AND u.id = n.estudiante_id
+        WHERE t.id = ? AND u.rol = 'estudiante'
     `;
 
-    db.query(
-        sql, 
-        [nombre, codigo_clase, grado, seccion, docente_id || null], 
-        (err, result) => {
-            if (err) {
-                console.error("Error al insertar clase:", err);
-                return res.status(500).json({ message: "Error al guardar en la base de datos" });
-            }
-            res.status(201).json({ 
-                message: "Clase creada con éxito", 
-                id: result.insertId,
-                codigo: codigo_clase 
-            });
+    db.query(sql, [tareaId], (err, rows) => {
+        if (err) {
+            console.error(err);
+            return res.status(500).json({ error: "Error al obtener seguimiento" });
         }
-    );
+        res.json(rows);
+    });
 });
 
 module.exports = router;
