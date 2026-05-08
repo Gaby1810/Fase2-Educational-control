@@ -32,7 +32,7 @@ const handleLogin = async () => {
       password: password
     });
 
-    navigation.navigate("/Dashboard");
+    navigation.navigate("Dashboard");
 
   } catch (error) {
 
