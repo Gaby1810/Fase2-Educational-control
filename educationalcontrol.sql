@@ -162,3 +162,8 @@ CREATE TABLE notas (
     REFERENCES usuarios(id)
     ON DELETE CASCADE
 );
+select*from clases;
+select*from usuarios;
+SELECT 
+    clases.*,
+    usuarios.nombre AS docente;

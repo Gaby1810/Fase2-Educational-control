@@ -27,7 +27,7 @@ const handleLogin = async () => {
 
   try {
 
-    const res = await post("/login", {
+    const res = await post("/auth/login", {
       correo: email,
       password: password
     });
