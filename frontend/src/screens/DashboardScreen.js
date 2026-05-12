@@ -34,7 +34,7 @@ export default function DashboardScreen({ navigation }) { // <--- Agregado navig
       desc: "Mantente al día con tus deberes y entregas.",
       image: "https://cdn-icons-png.flaticon.com/512/4341/4341139.png",
       icon: "clipboard-text",
-      route: "obtenertareas"
+      route: "ClasesList"
     },
     {
       title: "Promedio general",

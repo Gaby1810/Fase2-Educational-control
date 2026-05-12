@@ -9,7 +9,8 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Dimensions
+  Dimensions,
+  Alert
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -36,20 +37,39 @@ export default function RegisterScreen({ navigation }) {
 
    const handleRegister = async () => {
 
-    console.log("🔥 CLICK REGISTER");
-
     if (!nombre || !correo || !password || !confirm || !rol) {
-      alert("Completa todos los campos");
+      Alert.alert("Atención", "Completa todos los campos");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(correo)) {
+      Alert.alert("Atención", "Correo inválido");
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert("Atención", "La contraseña debe tener al menos 6 caracteres");
       return;
     }
 
     if (password !== confirm) {
-      alert("Las contraseñas no coinciden");
+      Alert.alert("Atención", "Las contraseñas no coinciden");
+      return;
+    }
+
+    if (rol === "estudiante" && (!grado || !seccion)) {
+      Alert.alert("Atención", "Estudiante: completa grado y sección");
+      return;
+    }
+
+    if (rol === "docente" && !materia) {
+      Alert.alert("Atención", "Docente: ingresa la materia principal");
       return;
     }
 
     try {
-      const res = await post("/register", {
+      const res = await post("/auth/register", {
         nombre,
         correo,
         password,
@@ -61,11 +81,11 @@ export default function RegisterScreen({ navigation }) {
         telefono
       });
 
-      alert(res.mensaje);
+      Alert.alert("Listo", res.mensaje);
       navigation.navigate("Login");
 
     } catch (error) {
-      alert(error.message);
+      Alert.alert("Error", error.message);
     }
   };
 

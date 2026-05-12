@@ -16,15 +16,17 @@ import {
 
 import { Ionicons } from '@expo/vector-icons';
 
-import { post } from '../services/api';
+import { get, post } from '../services/api';
 
 import { Colors } from '../constants/colors';
 
-import API_BASE_URL from '../constants/api';
+import { useAuth } from '../contexts/AuthContext';
 
 const { width } = Dimensions.get('window');
 
 export default function ClasesListScreen({ navigation }) {
+
+  const { usuario } = useAuth();
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [clases, setClases] = useState([]);
@@ -32,36 +34,19 @@ export default function ClasesListScreen({ navigation }) {
   const [form, setForm] = useState({
     nombre: '',
     grado: '',
-    seccion: '',
-    docente_id: 1
+    seccion: ''
   });
 
-  // 🔥 AQUI SE SOLUCIONA TODO
   useEffect(() => {
     cargarClases();
   }, []);
 
   const cargarClases = async () => {
     try {
-
-      const url = `${API_BASE_URL}/clases`;
-
-      console.log("URL:", url);
-
-      const response = await fetch(url);
-
-      const text = await response.text();
-
-      console.log("RESPUESTA:", text);
-
-      const data = JSON.parse(text);
-
+      const data = await get("/clases");
       setClases(data);
-
     } catch (error) {
-
       console.log("Error al obtener clases:", error);
-
     }
   };
   // =====================================
@@ -106,8 +91,7 @@ export default function ClasesListScreen({ navigation }) {
       setForm({
         nombre: '',
         grado: '',
-        seccion: '',
-        docente_id: 1
+        seccion: ''
       });
 
       cargarClases();

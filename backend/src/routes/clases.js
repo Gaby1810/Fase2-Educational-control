@@ -1,21 +1,30 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const auth = require('../middleware/auth');
 
 
-// OBTENER CLASES
-router.get('/', (req, res) => {
+// =====================
+// OBTENER CLASES (filtradas por docente logueado)
+// Sigue siendo GET /api/clases — pero ahora protegida
+// =====================
+router.get('/', auth, (req, res) => {
 
-    const sql = "SELECT * FROM clases ORDER BY id DESC";
+    const docenteId = req.usuario.id;
 
-    db.query(sql, (err, rows) => {
+    const sql = `
+        SELECT c.*, u.nombre AS docente
+        FROM clases c
+        LEFT JOIN usuarios u ON u.id = c.docente_id
+        WHERE c.docente_id = ?
+        ORDER BY c.id DESC
+    `;
+
+    db.query(sql, [docenteId], (err, rows) => {
 
         if (err) {
             console.log(err);
-
-            return res.status(500).json({
-                error: "Error al obtener clases"
-            });
+            return res.status(500).json({ error: "Error al obtener clases" });
         }
 
         res.json(rows);
@@ -23,21 +32,26 @@ router.get('/', (req, res) => {
 });
 
 
+// =====================
 // CREAR CLASE
-router.post('/crear', (req, res) => {
+// docente_id se toma del token, NO del body
+// =====================
+router.post('/crear', auth, (req, res) => {
 
-    const {
-        nombre,
-        grado,
-        seccion,
-        docente_id
-    } = req.body;
+    const { nombre, grado, seccion } = req.body;
+    const docente_id = req.usuario.id;
+
+    if (!nombre || !grado) {
+        return res.status(400).json({
+            error: "Nombre y grado son obligatorios"
+        });
+    }
 
     const codigo_clase =
         Math.random()
-        .toString(36)
-        .substring(2, 8)
-        .toUpperCase();
+            .toString(36)
+            .substring(2, 8)
+            .toUpperCase();
 
     const sql = `
         INSERT INTO clases
@@ -47,19 +61,11 @@ router.post('/crear', (req, res) => {
 
     db.query(
         sql,
-        [
-            nombre,
-            grado,
-            seccion,
-            codigo_clase,
-            docente_id
-        ],
+        [nombre, grado, seccion || null, codigo_clase, docente_id],
         (err, result) => {
 
             if (err) {
-
                 console.log(err);
-
                 return res.status(500).json({
                     error: "Error al crear clase"
                 });

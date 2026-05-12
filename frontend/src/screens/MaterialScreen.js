@@ -50,29 +50,27 @@ MaterialClaseScreen({
     route?.params?.clase;
 
   // =========================
-  // STATES
+  // STATES (siempre antes de cualquier return — reglas de hooks)
   // =========================
 
-  const [materiales,
-  setMateriales] =
-  useState([]);
+  const [materiales, setMateriales] = useState([]);
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [archivo, setArchivo] = useState(null);
 
-  const [mostrarFormulario,
-  setMostrarFormulario] =
-  useState(false);
-
-  const [archivo,
-  setArchivo] =
-  useState(null);
-
-  const [form,
-  setForm] =
-  useState({
-
+  const [form, setForm] = useState({
     titulo: '',
     descripcion: ''
-
   });
+
+  // =========================
+  // CARGAR MATERIALES
+  // =========================
+
+  useEffect(() => {
+    if (clase?.id) {
+      cargarMateriales();
+    }
+  }, [clase?.id]);
 
   // =========================
   // PROTECCION
@@ -97,19 +95,6 @@ MaterialClaseScreen({
       </View>
     );
   }
-
-  // =========================
-  // CARGAR MATERIALES
-  // =========================
-
-  useEffect(() => {
-
-    if (clase?.id) {
-
-      cargarMateriales();
-    }
-
-  }, []);
 
 
   const cargarMateriales =
@@ -454,6 +439,12 @@ MaterialClaseScreen({
             <TouchableOpacity
               key={item.id}
               style={styles.materialCard}
+              onPress={() =>
+                navigation.navigate(
+                  'DetalleMaterial',
+                  { material: item }
+                )
+              }
             >
 
               <View

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { post } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 import {
   View,
   Text,
@@ -9,7 +10,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Dimensions
+  Dimensions,
+  Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -22,8 +24,14 @@ export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const { login } = useAuth();
 
 const handleLogin = async () => {
+
+  if (!email || !password) {
+    Alert.alert("Atención", "Ingresa correo y contraseña");
+    return;
+  }
 
   try {
 
@@ -32,11 +40,16 @@ const handleLogin = async () => {
       password: password
     });
 
-    navigation.navigate("Dashboard");
+    await login(res.token, res.usuario);
+
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "Dashboard" }],
+    });
 
   } catch (error) {
 
-    alert(error.message);
+    Alert.alert("Error", error.message);
 
   }
 };

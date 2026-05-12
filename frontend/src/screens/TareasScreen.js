@@ -15,8 +15,7 @@ import {
 } from '@expo/vector-icons';
 
 import { Colors } from '../constants/colors';
-
-import API_BASE_URL from '../constants/api';
+import { get } from '../services/api';
 
 export default function TareasScreen({
   route,
@@ -36,7 +35,51 @@ export default function TareasScreen({
 
 
   // =========================================
-  // VALIDAR
+  // STATES (declarados ANTES de cualquier return para respetar reglas de hooks)
+  // =========================================
+
+  const [tareas, setTareas] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+
+  // =========================================
+  // OBTENER TAREAS
+  // =========================================
+
+  const obtenerTareas = async () => {
+
+    if (!claseId) return;
+
+    try {
+      setLoading(true);
+      const data = await get(`/tareas/clase/${claseId}`);
+      setTareas(data);
+    } catch (error) {
+      console.log("Error al obtener tareas:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+  // =========================================
+  // RECARGAR AL ENTRAR
+  // =========================================
+
+  useEffect(() => {
+
+    const unsubscribe =
+      navigation.addListener('focus', () => {
+        obtenerTareas();
+      });
+
+    return unsubscribe;
+
+  }, [navigation, claseId]);
+
+
+  // =========================================
+  // VALIDAR (después de todos los hooks)
   // =========================================
 
   if (!claseId) {
@@ -70,70 +113,6 @@ export default function TareasScreen({
       </SafeAreaView>
     );
   }
-
-
-  // =========================================
-  // STATES
-  // =========================================
-
-  const [tareas, setTareas] =
-    useState([]);
-
-  const [loading, setLoading] =
-    useState(true);
-
-
-  // =========================================
-  // OBTENER TAREAS
-  // =========================================
-
-  const obtenerTareas = async () => {
-
-    try {
-
-      setLoading(true);
-
-      const response = await fetch(
-        `${API_BASE_URL}/api/clases/${claseId}/tareas`
-      );
-
-      const data =
-        await response.json();
-
-      setTareas(data);
-
-    } catch (error) {
-
-      console.log(
-        "Error al obtener tareas:",
-        error
-      );
-
-    } finally {
-
-      setLoading(false);
-    }
-  };
-
-
-  // =========================================
-  // RECARGAR AL ENTRAR
-  // =========================================
-
-  useEffect(() => {
-
-    const unsubscribe =
-      navigation.addListener(
-        'focus',
-        () => {
-
-          obtenerTareas();
-        }
-      );
-
-    return unsubscribe;
-
-  }, [navigation]);
 
 
   // =========================================

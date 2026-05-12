@@ -19,7 +19,7 @@ import {
 import * as DocumentPicker from 'expo-document-picker';
 
 import { Colors } from '../constants/colors';
-import API_BASE_URL from '../constants/api';
+import { post } from '../services/api';
 
 export default function SubirMaterialScreen({ route, navigation }) {
 
@@ -79,41 +79,17 @@ export default function SubirMaterialScreen({ route, navigation }) {
 
       const formData = new FormData();
 
-      formData.append('clase_id', claseId);
+      formData.append('clase_id', String(claseId));
       formData.append('titulo', form.titulo);
       formData.append('descripcion', form.descripcion);
 
-      formData.append('file', {
+      formData.append('archivo', {
         uri: archivoSeleccionado.uri,
         name: archivoSeleccionado.name,
         type: archivoSeleccionado.mimeType || 'application/octet-stream'
       });
-      const response = await fetch(
-  `${API_BASE_URL}/materiales/subir`, // ❌ sin /api
-  {
-    method: 'POST',
-    body: formData
-  }
-);
 
-      const text = await response.text();
-
-      console.log("📦 RESPUESTA BACKEND:", text);
-
-      // 🚨 VALIDAR JSON
-      let data;
-
-      try {
-        data = JSON.parse(text);
-      } catch (e) {
-        console.log("❌ NO JSON:", text);
-        throw new Error("El backend no devolvió JSON (revisa ruta /api/materiales/subir)");
-      }
-
-      // 🚨 ERROR HTTP
-      if (!response.ok) {
-        throw new Error(data.error || "Error al subir material");
-      }
+      await post('/materiales/subir', formData);
 
       Alert.alert(
         "Éxito",
