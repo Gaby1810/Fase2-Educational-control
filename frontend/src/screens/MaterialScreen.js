@@ -33,6 +33,8 @@ import {
 }
 from '../services/api';
 
+import { useAuth } from '../contexts/AuthContext';
+
 const { width } =
 Dimensions.get('window');
 
@@ -48,6 +50,9 @@ MaterialClaseScreen({
 
   const clase =
     route?.params?.clase;
+
+  const { usuario } = useAuth();
+  const esDocente = usuario?.rol === 'docente';
 
   // =========================
   // STATES (siempre antes de cualquier return — reglas de hooks)
@@ -278,27 +283,29 @@ MaterialClaseScreen({
             Material Clase
           </Text>
 
-          <TouchableOpacity
-            style={styles.publicarAction}
+          {esDocente && (
+            <TouchableOpacity
+              style={styles.publicarAction}
 
-            onPress={() =>
-              setMostrarFormulario(
-                !mostrarFormulario
-              )
-            }
-          >
+              onPress={() =>
+                setMostrarFormulario(
+                  !mostrarFormulario
+                )
+              }
+            >
 
-            <Text style={styles.publicarLabel}>
-              Publicar
-            </Text>
+              <Text style={styles.publicarLabel}>
+                Publicar
+              </Text>
 
-            <Ionicons
-              name="add-circle"
-              size={34}
-              color={Colors.primary}
-            />
+              <Ionicons
+                name="add-circle"
+                size={34}
+                color={Colors.primary}
+              />
 
-          </TouchableOpacity>
+            </TouchableOpacity>
+          )}
 
         </View>
 
@@ -423,7 +430,9 @@ MaterialClaseScreen({
               />
 
               <Text style={styles.emptyText}>
-                No has publicado material
+                {esDocente
+                  ? "No has publicado material"
+                  : "No hay materiales en esta clase"}
               </Text>
 
             </View>

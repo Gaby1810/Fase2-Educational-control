@@ -2,24 +2,43 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const auth = require('../middleware/auth');
+const requireRole = require('../middleware/requireRole');
 
 // =====================
 // LISTAR NOTAS DE UNA CLASE
+//  - Docente: ve TODAS las notas de la clase (con nombre del estudiante).
+//  - Estudiante: ve solo sus propias notas.
 // GET /api/notas/clase/:claseId
 // =====================
 router.get('/clase/:claseId', auth, (req, res) => {
 
     const { claseId } = req.params;
+    const { id, rol } = req.usuario;
 
-    const sql = `
-        SELECT n.*, u.nombre AS estudiante
-        FROM notas n
-        LEFT JOIN usuarios u ON u.id = n.estudiante_id
-        WHERE n.clase_id = ?
-        ORDER BY n.id DESC
-    `;
+    let sql;
+    let params;
 
-    db.query(sql, [claseId], (err, rows) => {
+    if (rol === 'estudiante') {
+        sql = `
+            SELECT n.*, u.nombre AS estudiante
+            FROM notas n
+            LEFT JOIN usuarios u ON u.id = n.estudiante_id
+            WHERE n.clase_id = ? AND n.estudiante_id = ?
+            ORDER BY n.id DESC
+        `;
+        params = [claseId, id];
+    } else {
+        sql = `
+            SELECT n.*, u.nombre AS estudiante
+            FROM notas n
+            LEFT JOIN usuarios u ON u.id = n.estudiante_id
+            WHERE n.clase_id = ?
+            ORDER BY n.id DESC
+        `;
+        params = [claseId];
+    }
+
+    db.query(sql, params, (err, rows) => {
 
         if (err) {
             console.log(err);
@@ -30,11 +49,12 @@ router.get('/clase/:claseId', auth, (req, res) => {
     });
 });
 
+
 // =====================
-// REGISTRAR / ACTUALIZAR NOTA
+// REGISTRAR NOTA (solo docente)
 // POST /api/notas/guardar
 // =====================
-router.post('/guardar', auth, (req, res) => {
+router.post('/guardar', auth, requireRole('docente'), (req, res) => {
 
     const { calificacion, evaluacion, clase_id, estudiante_id } = req.body;
 

@@ -1,10 +1,10 @@
-CREATE DATABASE educationalcontrol;
+CREATE DATABASE IF NOT EXISTS educationalcontrol;
 USE educationalcontrol;
 
 -- =========================
 -- TABLA USUARIOS
 -- =========================
-CREATE TABLE usuarios (
+CREATE TABLE IF NOT EXISTS usuarios (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(100),
     correo VARCHAR(100) UNIQUE,
@@ -12,7 +12,7 @@ CREATE TABLE usuarios (
     rol ENUM('estudiante','docente'),
 
     -- Datos estudiante
-    grado INT,
+    grado VARCHAR(20),
     seccion VARCHAR(10),
     turno VARCHAR(20),
 
@@ -20,10 +20,11 @@ CREATE TABLE usuarios (
     materia_principal VARCHAR(100),
     telefono VARCHAR(20)
 );
+
 -- =========================
 -- CLASES
 -- =========================
-CREATE TABLE clases (
+CREATE TABLE IF NOT EXISTS clases (
     id INT AUTO_INCREMENT PRIMARY KEY,
 
     nombre VARCHAR(100) NOT NULL,
@@ -42,7 +43,7 @@ CREATE TABLE clases (
 -- =========================
 -- INSCRIPCIONES
 -- =========================
-CREATE TABLE inscripciones (
+CREATE TABLE IF NOT EXISTS inscripciones (
     id INT AUTO_INCREMENT PRIMARY KEY,
 
     estudiante_id INT,
@@ -62,7 +63,7 @@ CREATE TABLE inscripciones (
 -- =========================
 -- MATERIALES
 -- =========================
-CREATE TABLE materiales (
+CREATE TABLE IF NOT EXISTS materiales (
     id INT AUTO_INCREMENT PRIMARY KEY,
 
     titulo VARCHAR(150) NOT NULL,
@@ -82,7 +83,7 @@ CREATE TABLE materiales (
 -- =========================
 -- TAREAS
 -- =========================
-CREATE TABLE tareas (
+CREATE TABLE IF NOT EXISTS tareas (
     id INT AUTO_INCREMENT PRIMARY KEY,
 
     titulo VARCHAR(150) NOT NULL,
@@ -100,7 +101,7 @@ CREATE TABLE tareas (
 -- =========================
 -- ENTREGA TAREAS
 -- =========================
-CREATE TABLE entrega_tareas (
+CREATE TABLE IF NOT EXISTS entrega_tareas (
     id INT AUTO_INCREMENT PRIMARY KEY,
 
     tarea_id INT,
@@ -122,7 +123,7 @@ CREATE TABLE entrega_tareas (
 -- =========================
 -- ASISTENCIA
 -- =========================
-CREATE TABLE asistencia (
+CREATE TABLE IF NOT EXISTS asistencia (
     id INT AUTO_INCREMENT PRIMARY KEY,
 
     fecha DATE NOT NULL,
@@ -144,7 +145,7 @@ CREATE TABLE asistencia (
 -- =========================
 -- NOTAS
 -- =========================
-CREATE TABLE notas (
+CREATE TABLE IF NOT EXISTS notas (
     id INT AUTO_INCREMENT PRIMARY KEY,
 
     calificacion FLOAT NOT NULL,
@@ -162,8 +163,3 @@ CREATE TABLE notas (
     REFERENCES usuarios(id)
     ON DELETE CASCADE
 );
-select*from clases;
-select*from usuarios;
-SELECT 
-    clases.*,
-    usuarios.nombre AS docente;

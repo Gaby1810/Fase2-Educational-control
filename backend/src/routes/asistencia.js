@@ -2,10 +2,61 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const auth = require('../middleware/auth');
+const requireRole = require('../middleware/requireRole');
 
 const mapaEstados = { P: 'presente', A: 'ausente', T: 'tarde' };
 
-router.post('/guardar', auth, (req, res) => {
+
+// =====================
+// OBTENER ASISTENCIA DE UNA CLASE
+//  - Docente: ve todos los registros con nombre del estudiante.
+//  - Estudiante: ve solo sus propios registros.
+// GET /api/asistencia/clase/:claseId
+// =====================
+router.get('/clase/:claseId', auth, (req, res) => {
+
+    const { claseId } = req.params;
+    const { id, rol } = req.usuario;
+
+    let sql;
+    let params;
+
+    if (rol === 'estudiante') {
+        sql = `
+            SELECT a.*
+            FROM asistencia a
+            WHERE a.clase_id = ? AND a.estudiante_id = ?
+            ORDER BY a.fecha DESC, a.id DESC
+        `;
+        params = [claseId, id];
+    } else {
+        sql = `
+            SELECT a.*, u.nombre AS estudiante
+            FROM asistencia a
+            LEFT JOIN usuarios u ON u.id = a.estudiante_id
+            WHERE a.clase_id = ?
+            ORDER BY a.fecha DESC, a.id DESC
+        `;
+        params = [claseId];
+    }
+
+    db.query(sql, params, (err, rows) => {
+
+        if (err) {
+            console.log(err);
+            return res.status(500).json({ error: "Error al obtener asistencia" });
+        }
+
+        res.json(rows);
+    });
+});
+
+
+// =====================
+// REGISTRAR ASISTENCIA (solo docente)
+// POST /api/asistencia/guardar
+// =====================
+router.post('/guardar', auth, requireRole('docente'), (req, res) => {
 
     const { clase_id, fecha, datos } = req.body;
 

@@ -2,41 +2,61 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const auth = require('../middleware/auth');
+const requireRole = require('../middleware/requireRole');
 
 
 // =====================
-// OBTENER CLASES (filtradas por docente logueado)
-// Sigue siendo GET /api/clases — pero ahora protegida
+// OBTENER CLASES
+// - Docente: ve las clases que él creó
+// - Estudiante: ve las clases en las que está inscrito
 // =====================
 router.get('/', auth, (req, res) => {
 
-    const docenteId = req.usuario.id;
+    const { id, rol } = req.usuario;
 
+    if (rol === 'docente') {
+
+        const sql = `
+            SELECT c.*, u.nombre AS docente
+            FROM clases c
+            LEFT JOIN usuarios u ON u.id = c.docente_id
+            WHERE c.docente_id = ?
+            ORDER BY c.id DESC
+        `;
+
+        return db.query(sql, [id], (err, rows) => {
+            if (err) {
+                console.log(err);
+                return res.status(500).json({ error: "Error al obtener clases" });
+            }
+            res.json(rows);
+        });
+    }
+
+    // estudiante
     const sql = `
         SELECT c.*, u.nombre AS docente
-        FROM clases c
+        FROM inscripciones i
+        INNER JOIN clases c ON c.id = i.clase_id
         LEFT JOIN usuarios u ON u.id = c.docente_id
-        WHERE c.docente_id = ?
+        WHERE i.estudiante_id = ?
         ORDER BY c.id DESC
     `;
 
-    db.query(sql, [docenteId], (err, rows) => {
-
+    db.query(sql, [id], (err, rows) => {
         if (err) {
             console.log(err);
             return res.status(500).json({ error: "Error al obtener clases" });
         }
-
         res.json(rows);
     });
 });
 
 
 // =====================
-// CREAR CLASE
-// docente_id se toma del token, NO del body
+// CREAR CLASE (solo docente)
 // =====================
-router.post('/crear', auth, (req, res) => {
+router.post('/crear', auth, requireRole('docente'), (req, res) => {
 
     const { nombre, grado, seccion } = req.body;
     const docente_id = req.usuario.id;
@@ -77,6 +97,103 @@ router.post('/crear', auth, (req, res) => {
             });
         }
     );
+});
+
+
+// =====================
+// UNIRSE A UNA CLASE (solo estudiante) por código
+// POST /api/clases/unirse  { codigo_clase }
+// =====================
+router.post('/unirse', auth, requireRole('estudiante'), (req, res) => {
+
+    const codigo_clase = String(req.body.codigo_clase || '')
+        .trim()
+        .toUpperCase();
+
+    const estudiante_id = req.usuario.id;
+
+    if (!codigo_clase) {
+        return res.status(400).json({ error: "Código requerido" });
+    }
+
+    const sqlBuscar = `
+        SELECT c.*, u.nombre AS docente
+        FROM clases c
+        LEFT JOIN usuarios u ON u.id = c.docente_id
+        WHERE c.codigo_clase = ?
+    `;
+
+    db.query(sqlBuscar, [codigo_clase], (err, rows) => {
+
+        if (err) {
+            console.log(err);
+            return res.status(500).json({ error: "Error en servidor" });
+        }
+
+        if (rows.length === 0) {
+            return res.status(404).json({ error: "Código inválido" });
+        }
+
+        const clase = rows[0];
+
+        // Evitar duplicar inscripción
+        db.query(
+            "SELECT id FROM inscripciones WHERE estudiante_id = ? AND clase_id = ?",
+            [estudiante_id, clase.id],
+            (err, dup) => {
+
+                if (err) {
+                    console.log(err);
+                    return res.status(500).json({ error: "Error en servidor" });
+                }
+
+                if (dup.length > 0) {
+                    return res.status(409).json({ error: "Ya estás inscrito en esta clase" });
+                }
+
+                db.query(
+                    "INSERT INTO inscripciones (estudiante_id, clase_id) VALUES (?, ?)",
+                    [estudiante_id, clase.id],
+                    (err, result) => {
+
+                        if (err) {
+                            console.log(err);
+                            return res.status(500).json({ error: "Error al inscribirse" });
+                        }
+
+                        res.json({ ok: true, clase });
+                    }
+                );
+            }
+        );
+    });
+});
+
+// =====================
+// LISTAR ESTUDIANTES INSCRITOS EN UNA CLASE (solo docente)
+// GET /api/clases/:claseId/estudiantes
+// =====================
+router.get('/:claseId/estudiantes', auth, requireRole('docente'), (req, res) => {
+
+    const { claseId } = req.params;
+
+    const sql = `
+        SELECT u.id, u.nombre, u.correo
+        FROM inscripciones i
+        INNER JOIN usuarios u ON u.id = i.estudiante_id
+        WHERE i.clase_id = ?
+        ORDER BY u.nombre ASC
+    `;
+
+    db.query(sql, [claseId], (err, rows) => {
+
+        if (err) {
+            console.log(err);
+            return res.status(500).json({ error: "Error al obtener estudiantes" });
+        }
+
+        res.json(rows);
+    });
 });
 
 module.exports = router;

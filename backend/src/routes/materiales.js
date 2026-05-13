@@ -7,6 +7,7 @@ const fs = require('fs');
 
 const db = require('../db');
 const auth = require('../middleware/auth');
+const requireRole = require('../middleware/requireRole');
 
 // =====================
 // CONFIG MULTER
@@ -116,7 +117,7 @@ function crearMaterialHandler(req, res) {
     }
 }
 
-router.post('/', auth, aceptarArchivo, crearMaterialHandler);
-router.post('/subir', auth, aceptarArchivo, crearMaterialHandler);
+router.post('/', auth, requireRole('docente'), aceptarArchivo, crearMaterialHandler);
+router.post('/subir', auth, requireRole('docente'), aceptarArchivo, crearMaterialHandler);
 
 module.exports = router;

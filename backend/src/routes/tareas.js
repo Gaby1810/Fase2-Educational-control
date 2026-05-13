@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const auth = require('../middleware/auth');
+const requireRole = require('../middleware/requireRole');
 
 // =====================
 // LISTAR TAREAS DE UNA CLASE
@@ -34,7 +35,7 @@ router.get('/clase/:claseId', auth, (req, res) => {
 // CREAR TAREA
 // POST /api/tareas/crear
 // =====================
-router.post('/crear', auth, (req, res) => {
+router.post('/crear', auth, requireRole('docente'), (req, res) => {
 
     const { titulo, descripcion, fecha_entrega, clase_id } = req.body;
 

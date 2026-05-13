@@ -16,6 +16,7 @@ import {
 
 import { Colors } from '../constants/colors';
 import { get } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function TareasScreen({
   route,
@@ -40,6 +41,9 @@ export default function TareasScreen({
 
   const [tareas, setTareas] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const { usuario } = useAuth();
+  const esDocente = usuario?.rol === 'docente';
 
 
   // =========================================
@@ -171,22 +175,26 @@ export default function TareasScreen({
         </Text>
 
 
-        <TouchableOpacity
-          onPress={() =>
-            navigation.navigate(
-              'SubirTarea',
-              { claseId }
-            )
-          }
-        >
+        {esDocente ? (
+          <TouchableOpacity
+            onPress={() =>
+              navigation.navigate(
+                'SubirTarea',
+                { claseId }
+              )
+            }
+          >
 
-          <Ionicons
-            name="add-circle"
-            size={28}
-            color={Colors.primary}
-          />
+            <Ionicons
+              name="add-circle"
+              size={28}
+              color={Colors.primary}
+            />
 
-        </TouchableOpacity>
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 28 }} />
+        )}
 
       </View>
 

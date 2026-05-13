@@ -5,14 +5,40 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
-  ScrollView
+  ScrollView,
+  Alert
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
+import { useAuth } from '../contexts/AuthContext';
 
-export default function DashboardScreen({ navigation }) { // <--- Agregado navigation
+export default function DashboardScreen({ navigation }) {
+
+  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    Alert.alert(
+      "Cerrar sesión",
+      "¿Estás seguro que deseas cerrar sesión?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Sí, salir",
+          style: "destructive",
+          onPress: async () => {
+            await logout();
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "Home" }],
+            });
+          }
+        }
+      ]
+    );
+  };
+
 
   const cards = [
     {
@@ -51,8 +77,8 @@ export default function DashboardScreen({ navigation }) { // <--- Agregado navig
         <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.goBack()}>
           <MaterialCommunityIcons name="chevron-left" size={28} color="#fff" />
         </TouchableOpacity>
-        <TouchableOpacity>
-          <MaterialCommunityIcons name="bell-outline" size={24} color="#fff" />
+        <TouchableOpacity style={styles.headerBtn} onPress={handleLogout}>
+          <MaterialCommunityIcons name="logout" size={22} color="#fff" />
         </TouchableOpacity>
       </View>
 
@@ -104,9 +130,9 @@ export default function DashboardScreen({ navigation }) { // <--- Agregado navig
           <Text style={styles.navText}>Estudiantes</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.navItem}>
-          <MaterialCommunityIcons name="account-outline" size={24} color="#777" />
-          <Text style={styles.navText}>Perfil</Text>
+        <TouchableOpacity style={styles.navItem} onPress={handleLogout}>
+          <MaterialCommunityIcons name="logout" size={24} color="#777" />
+          <Text style={styles.navText}>Salir</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
