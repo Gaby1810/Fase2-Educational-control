@@ -60,7 +60,7 @@ export default function DashboardScreen({ navigation }) {
       desc: "Mantente al día con tus deberes y entregas.",
       image: "https://cdn-icons-png.flaticon.com/512/4341/4341139.png",
       icon: "clipboard-text",
-      route: "ClasesList"
+      route: "Tareas"
     },
     {
       title: "Promedio general",
