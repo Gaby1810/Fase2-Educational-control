@@ -1,4 +1,5 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+
 import {
   StyleSheet,
   Text,
@@ -6,245 +7,236 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  ActivityIndicator
+  ActivityIndicator,
+  Alert
 } from 'react-native';
-import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+
+import {
+  MaterialCommunityIcons,
+  Ionicons
+} from '@expo/vector-icons';
+
 import { Colors } from '../constants/colors';
-import { get } from '../services/api';
+import { get, post } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
-const ESTADOS = [
+const estados = [
   { key: 'todas', label: 'Todas' },
-  { key: 'incompleta', label: 'Incompletas' },
-  { key: 'completa', label: 'Completas' }
+  { key: 'incompletas', label: 'Incompletas' },
+  { key: 'completas', label: 'Completas' }
 ];
 
-export default function TareasScreen({ route, navigation }) {
+export default function TareasScreen({
+  route,
+  navigation
+}) {
 
-  const claseId = route?.params?.claseId;
-  const nombreClase = route?.params?.nombreClase || 'Tareas activas';
-  const modoGeneral = !claseId;
+  const claseId = route?.params?.claseId || null;
+  const nombreClase = route?.params?.nombreClase || "Tareas activas";
+
+  const [tareas, setTareas] = useState([]);
+  const [materias, setMaterias] = useState([]);
+  const [resumen, setResumen] = useState({ total: 0, completas: 0, incompletas: 0 });
+  const [loading, setLoading] = useState(true);
+  const [materiaSeleccionada, setMateriaSeleccionada] = useState(claseId ? String(claseId) : 'todas');
+  const [estadoSeleccionado, setEstadoSeleccionado] = useState('todas');
 
   const { usuario } = useAuth();
   const esDocente = usuario?.rol === 'docente';
+  const vistaGlobalEstudiante = !claseId && !esDocente;
 
-  const [tareas, setTareas] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [estadoFiltro, setEstadoFiltro] = useState('todas');
-  const [materiaFiltro, setMateriaFiltro] = useState('todas');
-
-  const materias = useMemo(() => {
-    const mapa = new Map();
-    tareas.forEach((tarea) => {
-      if (tarea.clase_id && tarea.clase_nombre) {
-        mapa.set(String(tarea.clase_id), tarea.clase_nombre);
-      }
-    });
-    return Array.from(mapa, ([id, nombre]) => ({ id, nombre }));
-  }, [tareas]);
-
-  const tareasFiltradas = useMemo(() => {
-    return tareas.filter((tarea) => {
-      const coincideEstado =
-        esDocente || estadoFiltro === 'todas' || tarea.estado === estadoFiltro;
-      const coincideMateria =
-        !modoGeneral ||
-        materiaFiltro === 'todas' ||
-        String(tarea.clase_id) === String(materiaFiltro);
-
-      return coincideEstado && coincideMateria;
-    });
-  }, [estadoFiltro, materiaFiltro, modoGeneral, tareas]);
-
-  const resumen = useMemo(() => {
-    const completas = tareas.filter((tarea) => tarea.estado === 'completa').length;
-    const incompletas = tareas.filter((tarea) => tarea.estado !== 'completa').length;
-    return { completas, incompletas, total: tareas.length };
-  }, [tareas]);
+  const materiaFiltro = useMemo(() => {
+    if (claseId) return claseId;
+    return materiaSeleccionada === 'todas' ? null : materiaSeleccionada;
+  }, [claseId, materiaSeleccionada]);
 
   const obtenerTareas = async () => {
-    if (esDocente && !claseId) {
-      setLoading(false);
-      return;
-    }
-
     try {
       setLoading(true);
-      const endpoint = claseId && esDocente
-        ? `/tareas/clase/${claseId}`
-        : `/tareas/estudiante${claseId ? `?clase_id=${claseId}` : ''}`;
-      const data = await get(endpoint);
+
+      if (vistaGlobalEstudiante) {
+        const params = [`estado=${encodeURIComponent(estadoSeleccionado)}`];
+        if (materiaFiltro) params.push(`clase_id=${encodeURIComponent(materiaFiltro)}`);
+
+        const data = await get(`/tareas/estudiante?${params.join('&')}`);
+        setTareas(Array.isArray(data.tareas) ? data.tareas : []);
+        setMaterias(Array.isArray(data.materias) ? data.materias : []);
+        setResumen(data.resumen || { total: 0, completas: 0, incompletas: 0 });
+        return;
+      }
+
+      if (!claseId) {
+        setTareas([]);
+        return;
+      }
+
+      const data = await get(`/tareas/clase/${claseId}`);
       setTareas(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.log('Error al obtener tareas:', error);
-      setTareas([]);
+      console.log("Error al obtener tareas:", error);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', obtenerTareas);
-    return unsubscribe;
-  }, [navigation, claseId, esDocente]);
+    const unsubscribe = navigation.addListener('focus', () => {
+      obtenerTareas();
+    });
 
-  const formatearFecha = (fecha) => {
+    return unsubscribe;
+  }, [navigation, claseId, estadoSeleccionado, materiaFiltro, vistaGlobalEstudiante]);
+
+  useEffect(() => {
+    obtenerTareas();
+  }, [estadoSeleccionado, materiaFiltro]);
+
+  const formatoFecha = (fecha) => {
     if (!fecha) return 'Sin fecha';
     return new Date(fecha).toLocaleDateString();
   };
 
-  const colorEstado = (tarea) => {
-    if (tarea.estado === 'completa') return Colors.secondary;
-    if (tarea.vencida) return Colors.error;
+  const etiquetaTiempo = (item) => {
+    if (!item.fecha_entrega) return 'Sin fecha limite';
+    if (item.estado_entrega === 'completa') return 'Entregada';
+
+    const dias = Number(item.dias_restantes);
+    if (!Number.isFinite(dias)) return 'Pendiente';
+    if (dias < 0) return 'Vencida';
+    if (dias === 0) return 'Entrega hoy';
+    if (dias === 1) return 'Manana';
+    return `${dias} dias`;
+  };
+
+  const colorEstado = (item) => {
+    if (esDocente) return Colors.primary;
+    if (item.estado_entrega === 'completa') return Colors.secondary;
+    const dias = Number(item.dias_restantes);
+    if (Number.isFinite(dias) && dias < 0) return Colors.error;
     return Colors.tertiary;
   };
 
-  const textoEstado = (tarea) => {
-    if (tarea.estado === 'completa') return 'Completa';
-    if (tarea.vencida) return 'Vencida';
-    return 'Incompleta';
+  const marcarCompleta = async (item) => {
+    try {
+      await post(`/tareas/${item.id}/entregar`, {});
+      await obtenerTareas();
+    } catch (error) {
+      Alert.alert('No se pudo completar', error.message || 'Intenta de nuevo.');
+    }
   };
 
-  if (esDocente && !claseId) {
-    return (
-      <SafeAreaView style={[styles.container, styles.center, { backgroundColor: Colors.background }]}>
-        <MaterialCommunityIcons name="clipboard-text-outline" size={76} color={Colors.outline} />
-        <Text style={[styles.emptyTitle, { color: Colors.onSurface }]}>
-          Selecciona una clase
-        </Text>
-        <Text style={[styles.emptyText, { color: Colors.onSurfaceVariant }]}>
-          Las tareas de docentes se administran desde el detalle de cada clase.
-        </Text>
-      </SafeAreaView>
-    );
-  }
+  const textoEstado = (item) => {
+    if (esDocente) {
+      const entregas = Number(item.total_entregas || 0);
+      return `${entregas} entrega${entregas === 1 ? '' : 's'}`;
+    }
+
+    return item.estado_entrega === 'completa' ? 'Completada' : 'Incompleta';
+  };
+
+  const renderChip = (label, active, onPress) => (
+    <TouchableOpacity
+      style={[
+        styles.chip,
+        {
+          backgroundColor: active ? Colors.primary : Colors.surfaceContainerLow,
+          borderColor: active ? Colors.primary : Colors.outlineVariant
+        }
+      ]}
+      onPress={onPress}
+    >
+      <Text style={[styles.chipText, { color: active ? Colors.onPrimary : Colors.onSurfaceVariant }]}>
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: Colors.background }]}>
 
       <View style={[styles.header, { backgroundColor: Colors.surfaceContainerHighest }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color={Colors.primary} />
         </TouchableOpacity>
 
         <View style={styles.headerText}>
           <Text style={[styles.headerTitle, { color: Colors.onSurface }]} numberOfLines={1}>
-            {nombreClase}
+            {vistaGlobalEstudiante ? 'Tareas activas' : nombreClase}
           </Text>
           <Text style={[styles.headerSubtitle, { color: Colors.onSurfaceVariant }]}>
-            {modoGeneral ? 'Todas tus materias' : 'Trabajos asignados'}
+            {vistaGlobalEstudiante ? 'Todas tus materias' : 'Trabajos asignados'}
           </Text>
         </View>
 
         {esDocente && claseId ? (
-          <TouchableOpacity onPress={() => navigation.navigate('SubirTarea', { claseId })}>
-            <Ionicons name="add-circle" size={30} color={Colors.primary} />
+          <TouchableOpacity onPress={() => navigation.navigate('SubirTarea', { claseId, nombreClase })}>
+            <Ionicons name="add-circle" size={28} color={Colors.primary} />
           </TouchableOpacity>
         ) : (
-          <View style={{ width: 30 }} />
+          <View style={{ width: 28 }} />
         )}
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
-        <View style={[styles.summaryCard, { backgroundColor: Colors.surfaceContainerLow }]}>
-          <View>
-            <Text style={[styles.summaryLabel, { color: Colors.onSurfaceVariant }]}>
-              Tareas activas
-            </Text>
-            <Text style={[styles.summaryValue, { color: Colors.onSurface }]}>
-              {resumen.total}
-            </Text>
-          </View>
-
-          <View style={styles.summaryStats}>
-            <View style={styles.statItem}>
-              <Text style={[styles.statNumber, { color: Colors.tertiary }]}>
-                {resumen.incompletas}
-              </Text>
-              <Text style={[styles.statLabel, { color: Colors.onSurfaceVariant }]}>
-                Incompletas
-              </Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={[styles.statNumber, { color: Colors.secondary }]}>
-                {resumen.completas}
-              </Text>
-              <Text style={[styles.statLabel, { color: Colors.onSurfaceVariant }]}>
-                Completas
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {modoGeneral && materias.length > 0 && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterRow}
-          >
-            <TouchableOpacity
-              style={[
-                styles.filterChip,
-                materiaFiltro === 'todas' && styles.filterChipActive
-              ]}
-              onPress={() => setMateriaFiltro('todas')}
-            >
-              <Text
-                style={[
-                  styles.filterText,
-                  materiaFiltro === 'todas' && styles.filterTextActive
-                ]}
-              >
-                Todas
-              </Text>
-            </TouchableOpacity>
-
-            {materias.map((materia) => (
-              <TouchableOpacity
-                key={materia.id}
-                style={[
-                  styles.filterChip,
-                  materiaFiltro === materia.id && styles.filterChipActive
-                ]}
-                onPress={() => setMateriaFiltro(materia.id)}
-              >
-                <Text
-                  style={[
-                    styles.filterText,
-                    materiaFiltro === materia.id && styles.filterTextActive
-                  ]}
-                  numberOfLines={1}
-                >
-                  {materia.nombre}
+        {vistaGlobalEstudiante && (
+          <>
+            <View style={[styles.summaryCard, { backgroundColor: Colors.surfaceContainerHigh }]}>
+              <View>
+                <Text style={[styles.summaryLabel, { color: Colors.onSurfaceVariant }]}>
+                  Pendientes
                 </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        )}
-
-        {!esDocente && (
-          <View style={styles.segmented}>
-            {ESTADOS.map((estado) => (
-              <TouchableOpacity
-                key={estado.key}
-                style={[
-                  styles.segment,
-                  estadoFiltro === estado.key && styles.segmentActive
-                ]}
-                onPress={() => setEstadoFiltro(estado.key)}
-              >
-                <Text
-                  style={[
-                    styles.segmentText,
-                    estadoFiltro === estado.key && styles.segmentTextActive
-                  ]}
-                >
-                  {estado.label}
+                <Text style={[styles.summaryValue, { color: Colors.tertiary }]}>
+                  {resumen.incompletas || 0}
                 </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+              </View>
+
+              <View style={styles.summaryDivider} />
+
+              <View>
+                <Text style={[styles.summaryLabel, { color: Colors.onSurfaceVariant }]}>
+                  Completas
+                </Text>
+                <Text style={[styles.summaryValue, { color: Colors.secondary }]}>
+                  {resumen.completas || 0}
+                </Text>
+              </View>
+
+              <View style={styles.summaryDivider} />
+
+              <View>
+                <Text style={[styles.summaryLabel, { color: Colors.onSurfaceVariant }]}>
+                  Total
+                </Text>
+                <Text style={[styles.summaryValue, { color: Colors.onSurface }]}>
+                  {resumen.total || 0}
+                </Text>
+              </View>
+            </View>
+
+            <Text style={[styles.filterTitle, { color: Colors.onSurfaceVariant }]}>
+              MATERIA
+            </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
+              {renderChip('Todas', materiaSeleccionada === 'todas', () => setMateriaSeleccionada('todas'))}
+              {materias.map((materia) => renderChip(
+                materia.nombre,
+                materiaSeleccionada === String(materia.id),
+                () => setMateriaSeleccionada(String(materia.id))
+              ))}
+            </ScrollView>
+
+            <Text style={[styles.filterTitle, { color: Colors.onSurfaceVariant }]}>
+              ESTADO
+            </Text>
+            <View style={styles.chipsRow}>
+              {estados.map((estado) => renderChip(
+                estado.label,
+                estadoSeleccionado === estado.key,
+                () => setEstadoSeleccionado(estado.key)
+              ))}
+            </View>
+          </>
         )}
 
         {loading && (
@@ -256,52 +248,47 @@ export default function TareasScreen({ route, navigation }) {
           </View>
         )}
 
-        {!loading && tareasFiltradas.length === 0 && (
+        {!loading && tareas.length === 0 && (
           <View style={styles.emptyContainer}>
             <MaterialCommunityIcons
-              name="clipboard-check-outline"
-              size={80}
+              name="clipboard-text-outline"
+              size={78}
               color={Colors.outline}
             />
-            <Text style={[styles.emptyTitle, { color: Colors.onSurface }]}>
-              No hay tareas para este filtro
-            </Text>
             <Text style={[styles.emptyText, { color: Colors.onSurfaceVariant }]}>
-              Cambia la materia o el estado para ver otros resultados.
+              No hay tareas para este filtro.
             </Text>
           </View>
         )}
 
-        {!loading && tareasFiltradas.map((item) => (
+        {!loading && tareas.map((item) => (
           <View
-            key={`${item.clase_id || claseId}-${item.id}`}
+            key={item.id}
             style={[styles.tareaCard, { backgroundColor: Colors.surfaceContainerLow }]}
           >
-            <View style={styles.cardTop}>
+            <View style={styles.cardHeader}>
               <View style={[styles.iconBox, { backgroundColor: colorEstado(item) + '22' }]}>
                 <MaterialCommunityIcons
-                  name={item.estado === 'completa' ? 'check-circle' : 'clipboard-clock-outline'}
-                  size={26}
+                  name={esDocente ? 'clipboard-check-outline' : item.estado_entrega === 'completa' ? 'check-circle' : 'clipboard-text-outline'}
+                  size={25}
                   color={colorEstado(item)}
                 />
               </View>
 
-              <View style={styles.cardTitleWrap}>
+              <View style={styles.cardTitleBlock}>
                 <Text style={[styles.tareaTitle, { color: Colors.onSurface }]} numberOfLines={2}>
                   {item.titulo}
                 </Text>
-                {modoGeneral && (
-                  <Text style={[styles.materiaText, { color: Colors.primary }]} numberOfLines={1}>
-                    {item.clase_nombre || 'Materia'}
+                {vistaGlobalEstudiante && (
+                  <Text style={[styles.materiaText, { color: Colors.onSurfaceVariant }]} numberOfLines={1}>
+                    {item.materia}
                   </Text>
                 )}
               </View>
 
-              {!esDocente && (
-                <View style={[styles.statusBadge, { backgroundColor: colorEstado(item) }]}>
-                  <Text style={styles.statusText}>{textoEstado(item)}</Text>
-                </View>
-              )}
+              <View style={[styles.estadoBadge, { backgroundColor: colorEstado(item) }]}>
+                <Text style={styles.estadoText}>{etiquetaTiempo(item)}</Text>
+              </View>
             </View>
 
             {!!item.instrucciones && (
@@ -317,46 +304,53 @@ export default function TareasScreen({ route, navigation }) {
                 <MaterialCommunityIcons
                   name="calendar-clock"
                   size={16}
-                  color={item.vencida ? Colors.error : Colors.onSurfaceVariant}
+                  color={Colors.onSurfaceVariant}
                 />
-                <Text
-                  style={[
-                    styles.dateText,
-                    { color: item.vencida ? Colors.error : Colors.onSurfaceVariant }
-                  ]}
-                >
-                  Entrega: {formatearFecha(item.fecha_entrega)}
+                <Text style={[styles.dateText, { color: Colors.onSurfaceVariant }]}>
+                  Entrega: {formatoFecha(item.fecha_entrega)}
                 </Text>
               </View>
 
-              {item.fecha_entregada && (
-                <Text style={[styles.entregaText, { color: Colors.secondary }]}>
-                  Entregada {formatearFecha(item.fecha_entregada)}
+              {!esDocente && item.estado_entrega !== 'completa' ? (
+                <TouchableOpacity
+                  style={[styles.completeBtn, { borderColor: Colors.secondary }]}
+                  onPress={() => marcarCompleta(item)}
+                >
+                  <Text style={[styles.completeBtnText, { color: Colors.secondary }]}>
+                    Completar
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <Text style={[styles.statusText, { color: colorEstado(item) }]}>
+                  {textoEstado(item)}
                 </Text>
               )}
             </View>
           </View>
         ))}
+
       </ScrollView>
+
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  center: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24
+
+  container: {
+    flex: 1
   },
+
   header: {
-    height: 68,
+    minHeight: 70,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 15
+    paddingHorizontal: 15,
+    paddingVertical: 10
   },
-  headerBtn: {
+
+  backBtn: {
     width: 36,
     height: 36,
     borderRadius: 10,
@@ -364,184 +358,189 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center'
   },
+
   headerText: {
     flex: 1,
     marginHorizontal: 12
   },
+
   headerTitle: {
     fontWeight: 'bold',
     fontSize: 17
   },
+
   headerSubtitle: {
     fontSize: 11,
     marginTop: 2
   },
-  scrollContent: {
+
+  content: {
     padding: 20,
     paddingBottom: 34
   },
+
   summaryCard: {
     borderRadius: 20,
     padding: 18,
-    marginBottom: 16,
+    marginBottom: 20,
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between'
+    justifyContent: 'space-between',
+    alignItems: 'center'
   },
+
   summaryLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase'
   },
+
   summaryValue: {
-    fontSize: 38,
+    fontSize: 28,
     fontWeight: '800',
-    marginTop: 2
-  },
-  summaryStats: {
-    flexDirection: 'row',
-    gap: 18
-  },
-  statItem: {
-    alignItems: 'center'
-  },
-  statNumber: {
-    fontSize: 20,
-    fontWeight: '800'
-  },
-  statLabel: {
-    fontSize: 10,
-    marginTop: 2
-  },
-  filterRow: {
-    gap: 10,
-    paddingBottom: 12
-  },
-  filterChip: {
-    maxWidth: 170,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 12,
-    backgroundColor: Colors.surfaceContainerLow,
-    borderWidth: 1,
-    borderColor: Colors.outlineVariant
-  },
-  filterChipActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary
-  },
-  filterText: {
-    color: Colors.onSurfaceVariant,
-    fontWeight: '700',
-    fontSize: 12
-  },
-  filterTextActive: {
-    color: Colors.onPrimary
-  },
-  segmented: {
-    flexDirection: 'row',
-    backgroundColor: Colors.surfaceContainerLow,
-    borderRadius: 14,
-    padding: 4,
-    marginBottom: 16
-  },
-  segment: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderRadius: 10
-  },
-  segmentActive: {
-    backgroundColor: Colors.primary
-  },
-  segmentText: {
-    color: Colors.onSurfaceVariant,
-    fontWeight: '700',
-    fontSize: 12
-  },
-  segmentTextActive: {
-    color: Colors.onPrimary
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    marginTop: 42,
-    paddingHorizontal: 18
-  },
-  emptyTitle: {
-    fontSize: 17,
-    fontWeight: '800',
-    marginTop: 12,
+    marginTop: 4,
     textAlign: 'center'
   },
-  emptyText: {
-    fontSize: 13,
-    textAlign: 'center',
-    marginTop: 8
+
+  summaryDivider: {
+    width: 1,
+    height: 42,
+    backgroundColor: 'rgba(255,255,255,0.12)'
   },
+
+  filterTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1,
+    marginBottom: 10
+  },
+
+  chipsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 16,
+    paddingRight: 8
+  },
+
+  chip: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 9
+  },
+
+  chipText: {
+    fontSize: 12,
+    fontWeight: '800'
+  },
+
+  emptyContainer: {
+    alignItems: 'center',
+    marginTop: 42
+  },
+
+  emptyText: {
+    marginTop: 12,
+    fontSize: 14,
+    textAlign: 'center'
+  },
+
   tareaCard: {
     borderRadius: 18,
     padding: 16,
-    marginBottom: 14
+    marginBottom: 14,
+    elevation: 3
   },
-  cardTop: {
+
+  cardHeader: {
     flexDirection: 'row',
-    alignItems: 'center'
+    alignItems: 'center',
+    marginBottom: 10
   },
+
   iconBox: {
-    width: 46,
-    height: 46,
+    width: 44,
+    height: 44,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center'
   },
-  cardTitleWrap: {
+
+  cardTitleBlock: {
     flex: 1,
     marginLeft: 12,
     marginRight: 8
   },
+
   tareaTitle: {
-    fontWeight: '800',
-    fontSize: 16
+    fontWeight: 'bold',
+    fontSize: 15
   },
+
   materiaText: {
     fontSize: 12,
-    fontWeight: '700',
     marginTop: 3
   },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 10
+
+  estadoBadge: {
+    maxWidth: 92,
+    borderRadius: 12,
+    paddingHorizontal: 9,
+    paddingVertical: 7
   },
-  statusText: {
-    color: '#001645',
-    fontWeight: '800',
-    fontSize: 11
+
+  estadoText: {
+    color: '#071331',
+    fontSize: 10,
+    fontWeight: '900',
+    textAlign: 'center'
   },
+
   tareaDesc: {
     fontSize: 14,
     lineHeight: 20,
-    marginTop: 12
+    marginBottom: 12
   },
+
   divider: {
     height: 1,
     backgroundColor: 'rgba(255,255,255,0.1)',
-    marginVertical: 12
+    marginBottom: 12
   },
+
   cardFooter: {
-    gap: 8
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 10
   },
+
   dateInfo: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6
   },
+
   dateText: {
     fontSize: 12,
-    fontWeight: '700'
+    fontWeight: '600'
   },
-  entregaText: {
+
+  statusText: {
     fontSize: 12,
-    fontWeight: '700'
+    fontWeight: '900'
+  },
+
+  completeBtn: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 7
+  },
+
+  completeBtnText: {
+    fontSize: 12,
+    fontWeight: '900'
   }
+
 });

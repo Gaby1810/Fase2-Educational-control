@@ -9,12 +9,14 @@ import { Colors } from '../constants/colors';
 import { post } from '../services/api';
 
 export default function SubirTareaScreen({ route, navigation }) {
-  const { claseId } = route.params;
+  const claseId = route?.params?.claseId;
+  const nombreClase = route?.params?.nombreClase || 'la clase';
   const [titulo, setTitulo] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [fecha, setFecha] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isPublicado, setIsPublicado] = useState(false);
+  const [publicando, setPublicando] = useState(false);
 
   useEffect(() => {
     if (isPublicado) {
@@ -27,6 +29,12 @@ export default function SubirTareaScreen({ route, navigation }) {
   }, [isPublicado]);
 
   const handlePublicar = async () => {
+    if (!claseId) {
+      Alert.alert("Clase no encontrada", "Regresa a la clase e intenta crear la tarea nuevamente.");
+      return;
+    }
+
+    if (publicando) return;
     
     if (!titulo.trim()) {
       Alert.alert("Campo Requerido", "Por favor ingresa un título para la tarea.");
@@ -38,17 +46,20 @@ export default function SubirTareaScreen({ route, navigation }) {
     }
 
     try {
+      setPublicando(true);
       const data = {
         clase_id: claseId,
-        titulo: titulo,
-        descripcion: descripcion,
+        titulo: titulo.trim(),
+        instrucciones: descripcion.trim(),
         fecha_entrega: fecha.toISOString().split('T')[0], // Formato YYYY-MM-DD
       };
 
       await post('/tareas/crear', data);
       setIsPublicado(true);
     } catch (error) {
-      Alert.alert("Error", "No se pudo conectar con el servidor.");
+      Alert.alert("Error", error.message || "No se pudo publicar la tarea.");
+    } finally {
+      setPublicando(false);
     }
   };
 
@@ -63,7 +74,12 @@ export default function SubirTareaScreen({ route, navigation }) {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="close" size={28} color={Colors.onSurface} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: Colors.onSurface }]}>Nueva Tarea</Text>
+        <View style={{ alignItems: 'center' }}>
+          <Text style={[styles.headerTitle, { color: Colors.onSurface }]}>Nueva Tarea</Text>
+          <Text style={[styles.headerSub, { color: Colors.onSurfaceVariant }]} numberOfLines={1}>
+            {nombreClase}
+          </Text>
+        </View>
         <View style={{ width: 28 }} />
       </View>
 
@@ -113,10 +129,13 @@ export default function SubirTareaScreen({ route, navigation }) {
         </View>
 
         <TouchableOpacity 
-          style={[styles.btnPrimary, { backgroundColor: Colors.primary }]} 
+          style={[styles.btnPrimary, { backgroundColor: Colors.primary, opacity: publicando ? 0.65 : 1 }]} 
           onPress={handlePublicar}
+          disabled={publicando}
         >
-          <Text style={[styles.btnText, { color: Colors.onPrimary }]}>PUBLICAR TAREA</Text>
+          <Text style={[styles.btnText, { color: Colors.onPrimary }]}>
+            {publicando ? 'PUBLICANDO...' : 'PUBLICAR TAREA'}
+          </Text>
         </TouchableOpacity>
       </ScrollView>
 
@@ -138,6 +157,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { height: 60, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20 },
   headerTitle: { fontSize: 18, fontWeight: 'bold' },
+  headerSub: { fontSize: 11, marginTop: 2, maxWidth: 220 },
   scrollContent: { padding: 25 },
   inputGroup: { marginBottom: 20 },
   label: { fontSize: 14, fontWeight: 'bold', marginBottom: 8 },
