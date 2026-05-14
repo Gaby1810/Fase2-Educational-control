@@ -8,17 +8,15 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../constants/colors';
+import AnimatedBackground from '../components/AnimatedBackground';
 
 const { width, height } = Dimensions.get('window');
 
 export default function HomeScreen({ navigation }) {
   return (
     <View style={styles.container}>
-      {/* Background Decorative Elements */}
-      <View style={styles.decorativeContainer} pointerEvents="none">
-        <View style={[styles.decorCircle, styles.decorTop]} />
-        <View style={[styles.decorCircle, styles.decorBottom]} />
-      </View>
+      {/* Fondo animado profesional */}
+      <AnimatedBackground intensity="normal" />
 
       <SafeAreaView style={styles.safeArea}>
         {/* Header */}

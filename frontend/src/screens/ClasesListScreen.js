@@ -23,6 +23,8 @@ import { get, post } from '../services/api';
 import { Colors } from '../constants/colors';
 
 import { useAuth } from '../contexts/AuthContext';
+import { MATERIAS, GRADOS, SECCIONES } from '../constants/options';
+import SelectInput from '../components/SelectInput';
 
 const { width } = Dimensions.get('window');
 
@@ -358,52 +360,49 @@ export default function ClasesListScreen({ navigation }) {
           >
 
             <Text style={styles.label}>
-              Nombre clase
+              Materia
             </Text>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Matemáticas"
-              value={form.nombre}
-              onChangeText={(t) =>
-                setForm({
-                  ...form,
-                  nombre: t
-                })
-              }
-            />
+            <View style={{ marginBottom: 15 }}>
+              <SelectInput
+                placeholder="Selecciona la materia"
+                title="Materia"
+                icon="book-open-page-variant"
+                value={form.nombre}
+                options={MATERIAS}
+                onSelect={(v) => setForm({ ...form, nombre: v })}
+              />
+            </View>
 
             <Text style={styles.label}>
               Grado
             </Text>
 
-            <TextInput
-              style={styles.input}
-              placeholder="9°"
-              value={form.grado}
-              onChangeText={(t) =>
-                setForm({
-                  ...form,
-                  grado: t
-                })
-              }
-            />
+            <View style={{ marginBottom: 15 }}>
+              <SelectInput
+                placeholder="Selecciona el grado"
+                title="Grado"
+                icon="school-outline"
+                value={form.grado}
+                options={GRADOS}
+                onSelect={(v) => setForm({ ...form, grado: v })}
+              />
+            </View>
 
             <Text style={styles.label}>
               Sección
             </Text>
 
-            <TextInput
-              style={styles.input}
-              placeholder="A"
-              value={form.seccion}
-              onChangeText={(t) =>
-                setForm({
-                  ...form,
-                  seccion: t
-                })
-              }
-            />
+            <View style={{ marginBottom: 15 }}>
+              <SelectInput
+                placeholder="Selecciona la sección"
+                title="Sección"
+                icon="alpha-s-circle-outline"
+                value={form.seccion}
+                options={SECCIONES}
+                onSelect={(v) => setForm({ ...form, seccion: v })}
+              />
+            </View>
 
             <TouchableOpacity
               style={styles.btnSave}

@@ -1,13 +1,48 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
 const db = require('../db');
 const auth = require('../middleware/auth');
 const requireRole = require('../middleware/requireRole');
 
 // =====================
-// TAREAS DEL ESTUDIANTE
+// CONFIG MULTER (compartido para crear y entregar)
+// =====================
+const uploadsDir = path.join(__dirname, '..', '..', 'uploads');
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, uploadsDir),
+    filename: (req, file, cb) => {
+        cb(null, Date.now() + '-' + Math.round(Math.random() * 1e9) + path.extname(file.originalname));
+    }
+});
+
+const upload = multer({
+    storage,
+    limits: { fileSize: 25 * 1024 * 1024 } // 25 MB
+});
+
+// Acepta el archivo bajo el nombre 'archivo' o 'file'
+const aceptarArchivo = upload.fields([
+    { name: 'archivo', maxCount: 1 },
+    { name: 'file', maxCount: 1 }
+]);
+
+function extraerArchivo(req) {
+    if (!req.files) return null;
+    if (req.files.archivo && req.files.archivo[0]) return req.files.archivo[0].filename;
+    if (req.files.file && req.files.file[0]) return req.files.file[0].filename;
+    return null;
+}
+
+
+// =====================
+// TAREAS DEL ESTUDIANTE (vista global)
 // GET /api/tareas/estudiante?clase_id=1&estado=incompletas
-// estado: todas | completas | incompletas
 // =====================
 router.get('/estudiante', auth, requireRole('estudiante'), (req, res) => {
 
@@ -34,6 +69,7 @@ router.get('/estudiante', auth, requireRole('estudiante'), (req, res) => {
             t.id,
             t.titulo,
             t.instrucciones,
+            t.archivo,
             t.fecha_entrega,
             t.clase_id,
             c.nombre AS materia,
@@ -106,17 +142,20 @@ router.get('/estudiante', auth, requireRole('estudiante'), (req, res) => {
     });
 });
 
+
 // =====================
-// MARCAR TAREA COMO ENTREGADA (estudiante)
+// ENTREGAR TAREA (estudiante)
 // POST /api/tareas/:tareaId/entregar
+// Acepta multipart con archivo (opcional)
 // =====================
-router.post('/:tareaId/entregar', auth, requireRole('estudiante'), (req, res) => {
+router.post('/:tareaId/entregar', auth, requireRole('estudiante'), aceptarArchivo, (req, res) => {
 
     const estudianteId = req.usuario.id;
     const tareaId = Number(req.params.tareaId);
+    const archivoSubido = extraerArchivo(req) || req.body.archivo || null;
 
     if (!tareaId) {
-        return res.status(400).json({ error: "Tarea invalida" });
+        return res.status(400).json({ error: "Tarea inválida" });
     }
 
     const validarSql = `
@@ -140,21 +179,39 @@ router.post('/:tareaId/entregar', auth, requireRole('estudiante'), (req, res) =>
         }
 
         db.query(
-            "SELECT id FROM entrega_tareas WHERE tarea_id = ? AND estudiante_id = ?",
+            "SELECT id, archivo FROM entrega_tareas WHERE tarea_id = ? AND estudiante_id = ?",
             [tareaId, estudianteId],
             (err, entregas) => {
+
                 if (err) {
                     console.log(err);
                     return res.status(500).json({ error: "Error al verificar entrega" });
                 }
 
+                // Si ya entregó: actualizar archivo si vino uno nuevo
                 if (entregas.length > 0) {
-                    return res.json({ ok: true, id: entregas[0].id, alreadyDelivered: true });
+                    const entrega = entregas[0];
+                    if (archivoSubido && archivoSubido !== entrega.archivo) {
+                        db.query(
+                            "UPDATE entrega_tareas SET archivo = ?, fecha_entrega = CURRENT_TIMESTAMP WHERE id = ?",
+                            [archivoSubido, entrega.id],
+                            (err) => {
+                                if (err) {
+                                    console.log(err);
+                                    return res.status(500).json({ error: "Error al actualizar entrega" });
+                                }
+                                res.json({ ok: true, id: entrega.id, updated: true });
+                            }
+                        );
+                        return;
+                    }
+                    return res.json({ ok: true, id: entrega.id, alreadyDelivered: true });
                 }
 
+                // Nueva entrega
                 db.query(
                     "INSERT INTO entrega_tareas (tarea_id, estudiante_id, archivo) VALUES (?, ?, ?)",
-                    [tareaId, estudianteId, req.body.archivo || null],
+                    [tareaId, estudianteId, archivoSubido],
                     (err, result) => {
                         if (err) {
                             console.log(err);
@@ -168,6 +225,7 @@ router.post('/:tareaId/entregar', auth, requireRole('estudiante'), (req, res) =>
         );
     });
 });
+
 
 // =====================
 // LISTAR TAREAS DE UNA CLASE
@@ -191,7 +249,7 @@ router.get('/clase/:claseId', auth, (req, res) => {
             INNER JOIN clases c ON c.id = t.clase_id
             LEFT JOIN entrega_tareas et ON et.tarea_id = t.id
             WHERE t.clase_id = ? AND c.docente_id = ?
-            GROUP BY t.id, t.titulo, t.instrucciones, t.fecha_entrega, t.clase_id, c.nombre
+            GROUP BY t.id, t.titulo, t.instrucciones, t.archivo, t.fecha_entrega, t.clase_id, c.nombre
             ORDER BY t.id DESC
         `;
         params = [claseId, id];
@@ -232,14 +290,15 @@ router.get('/clase/:claseId', auth, (req, res) => {
 
 
 // =====================
-// CREAR TAREA
+// CREAR TAREA (docente) — con archivo opcional
 // POST /api/tareas/crear
 // =====================
-router.post('/crear', auth, requireRole('docente'), (req, res) => {
+router.post('/crear', auth, requireRole('docente'), aceptarArchivo, (req, res) => {
 
     const { titulo, descripcion, instrucciones, fecha_entrega, clase_id } = req.body;
     const docenteId = req.usuario.id;
     const textoInstrucciones = instrucciones || descripcion || null;
+    const archivoSubido = extraerArchivo(req);
 
     if (!titulo || !clase_id) {
         return res.status(400).json({
@@ -263,13 +322,13 @@ router.post('/crear', auth, requireRole('docente'), (req, res) => {
 
             const sql = `
                 INSERT INTO tareas
-                (titulo, instrucciones, fecha_entrega, clase_id)
-                VALUES (?, ?, ?, ?)
+                (titulo, instrucciones, archivo, fecha_entrega, clase_id)
+                VALUES (?, ?, ?, ?, ?)
             `;
 
             db.query(
                 sql,
-                [titulo.trim(), textoInstrucciones, fecha_entrega || null, clase_id],
+                [String(titulo).trim(), textoInstrucciones, archivoSubido, fecha_entrega || null, clase_id],
                 (err, result) => {
 
                     if (err) {
@@ -277,17 +336,7 @@ router.post('/crear', auth, requireRole('docente'), (req, res) => {
                         return res.status(500).json({ error: "Error al crear tarea" });
                     }
 
-                    res.json({
-                        ok: true,
-                        id: result.insertId,
-                        tarea: {
-                            id: result.insertId,
-                            titulo: titulo.trim(),
-                            instrucciones: textoInstrucciones,
-                            fecha_entrega: fecha_entrega || null,
-                            clase_id
-                        }
-                    });
+                    res.json({ ok: true, id: result.insertId });
                 }
             );
         }

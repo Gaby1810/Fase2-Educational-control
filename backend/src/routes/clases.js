@@ -116,14 +116,19 @@ router.post('/unirse', auth, requireRole('estudiante'), (req, res) => {
         return res.status(400).json({ error: "Código requerido" });
     }
 
+    // Traemos también el grado/seccion del estudiante para validar
     const sqlBuscar = `
-        SELECT c.*, u.nombre AS docente
+        SELECT
+            c.*,
+            u.nombre AS docente,
+            (SELECT grado   FROM usuarios WHERE id = ?) AS estudiante_grado,
+            (SELECT seccion FROM usuarios WHERE id = ?) AS estudiante_seccion
         FROM clases c
         LEFT JOIN usuarios u ON u.id = c.docente_id
         WHERE c.codigo_clase = ?
     `;
 
-    db.query(sqlBuscar, [codigo_clase], (err, rows) => {
+    db.query(sqlBuscar, [estudiante_id, estudiante_id, codigo_clase], (err, rows) => {
 
         if (err) {
             console.log(err);
@@ -135,6 +140,26 @@ router.post('/unirse', auth, requireRole('estudiante'), (req, res) => {
         }
 
         const clase = rows[0];
+        const estudianteGrado = clase.estudiante_grado;
+        const estudianteSeccion = clase.estudiante_seccion;
+
+        // --- Limpiamos los campos auxiliares para no enviarlos como parte de la clase
+        delete clase.estudiante_grado;
+        delete clase.estudiante_seccion;
+
+        // 🚫 Validación: el grado del estudiante debe coincidir con el de la clase
+        if (clase.grado && estudianteGrado && clase.grado !== estudianteGrado) {
+            return res.status(403).json({
+                error: `Esta clase es para ${clase.grado}. Tu grado registrado es ${estudianteGrado}.`
+            });
+        }
+
+        // 🚫 Validación: la sección también debe coincidir (si la clase la especifica)
+        if (clase.seccion && estudianteSeccion && clase.seccion !== estudianteSeccion) {
+            return res.status(403).json({
+                error: `Esta clase es de la sección ${clase.seccion}. Tú estás en la sección ${estudianteSeccion}.`
+            });
+        }
 
         // Evitar duplicar inscripción
         db.query(

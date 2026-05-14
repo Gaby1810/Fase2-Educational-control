@@ -14,6 +14,7 @@ import SubirTareaScreen from '../screens/SubirTareaScreen';
 import NotasScreen from '../screens/NotasScreen';
 import AsistenciaScreen from '../screens/AsistenciaScreen';
 import DetalleMaterialScreen from '../screens/DetalleMaterialScreen';
+import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -60,6 +61,12 @@ export default function AppNavigator() {
       <Stack.Screen name="SubirTarea" component={SubirTareaScreen} />
       <Stack.Screen name="Notas" component={NotasScreen} />
       <Stack.Screen name="Asistencia" component={AsistenciaScreen} />
+
+      <Stack.Screen
+        name="ForgotPassword"
+        component={ForgotPasswordScreen}
+        options={{ headerShown: false }}
+      />
 
     </Stack.Navigator>
   );

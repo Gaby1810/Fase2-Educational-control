@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import * as DocumentPicker from 'expo-document-picker';
 import { Colors } from '../constants/colors';
 import { post } from '../services/api';
 
@@ -17,6 +18,23 @@ export default function SubirTareaScreen({ route, navigation }) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isPublicado, setIsPublicado] = useState(false);
   const [publicando, setPublicando] = useState(false);
+  const [archivo, setArchivo] = useState(null);
+
+  const seleccionarArchivo = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: '*/*',
+        copyToCacheDirectory: true
+      });
+      if (!result.canceled && result.assets?.[0]) {
+        setArchivo(result.assets[0]);
+      }
+    } catch (e) {
+      Alert.alert('Error', 'No se pudo seleccionar el archivo');
+    }
+  };
+
+  const quitarArchivo = () => setArchivo(null);
 
   useEffect(() => {
     if (isPublicado) {
@@ -47,14 +65,22 @@ export default function SubirTareaScreen({ route, navigation }) {
 
     try {
       setPublicando(true);
-      const data = {
-        clase_id: claseId,
-        titulo: titulo.trim(),
-        instrucciones: descripcion.trim(),
-        fecha_entrega: fecha.toISOString().split('T')[0], // Formato YYYY-MM-DD
-      };
 
-      await post('/tareas/crear', data);
+      const formData = new FormData();
+      formData.append('clase_id', String(claseId));
+      formData.append('titulo', titulo.trim());
+      formData.append('instrucciones', descripcion.trim());
+      formData.append('fecha_entrega', fecha.toISOString().split('T')[0]);
+
+      if (archivo) {
+        formData.append('archivo', {
+          uri: archivo.uri,
+          name: archivo.name,
+          type: archivo.mimeType || 'application/octet-stream'
+        });
+      }
+
+      await post('/tareas/crear', formData);
       setIsPublicado(true);
     } catch (error) {
       Alert.alert("Error", error.message || "No se pudo publicar la tarea.");
@@ -128,8 +154,43 @@ export default function SubirTareaScreen({ route, navigation }) {
           />
         </View>
 
-        <TouchableOpacity 
-          style={[styles.btnPrimary, { backgroundColor: Colors.primary, opacity: publicando ? 0.65 : 1 }]} 
+        <View style={styles.inputGroup}>
+          <Text style={[styles.label, { color: Colors.primary }]}>Archivo adjunto (opcional)</Text>
+
+          {!archivo ? (
+            <TouchableOpacity
+              style={[styles.uploadBox, { borderColor: Colors.outlineVariant }]}
+              onPress={seleccionarArchivo}
+              activeOpacity={0.8}
+            >
+              <MaterialCommunityIcons name="cloud-upload-outline" size={44} color={Colors.primary} />
+              <Text style={[styles.uploadText, { color: Colors.onSurface }]}>
+                Toca para subir un archivo
+              </Text>
+              <Text style={[styles.uploadHint, { color: Colors.onSurfaceVariant }]}>
+                PDF, Word, imágenes, etc. (máx 25 MB)
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={[styles.fileChip, { backgroundColor: Colors.surfaceContainerLow, borderColor: Colors.outlineVariant }]}>
+              <MaterialCommunityIcons name="file-document-outline" size={24} color={Colors.primary} />
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={[styles.fileName, { color: Colors.onSurface }]} numberOfLines={1}>
+                  {archivo.name}
+                </Text>
+                <Text style={{ color: Colors.onSurfaceVariant, fontSize: 11 }}>
+                  {archivo.size ? `${(archivo.size / 1024).toFixed(1)} KB` : 'Archivo seleccionado'}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={quitarArchivo} hitSlop={10}>
+                <MaterialCommunityIcons name="close-circle" size={22} color={Colors.error} />
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        <TouchableOpacity
+          style={[styles.btnPrimary, { backgroundColor: Colors.primary, opacity: publicando ? 0.65 : 1 }]}
           onPress={handlePublicar}
           disabled={publicando}
         >
@@ -167,5 +228,22 @@ const styles = StyleSheet.create({
   btnPrimary: { padding: 18, borderRadius: 15, alignItems: 'center', marginTop: 20, elevation: 4 },
   btnText: { fontWeight: 'bold', fontSize: 16 },
   successToast: { position: 'absolute', bottom: 40, left: 20, right: 20, padding: 15, borderRadius: 16, flexDirection: 'row', alignItems: 'center', elevation: 10, borderLeftWidth: 6, borderLeftColor: '#4CAF50' },
-  successTitle: { fontWeight: 'bold', fontSize: 15 }
+  successTitle: { fontWeight: 'bold', fontSize: 15 },
+  uploadBox: {
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderRadius: 14,
+    padding: 22,
+    alignItems: 'center'
+  },
+  uploadText: { fontWeight: '600', marginTop: 8, fontSize: 14 },
+  uploadHint: { fontSize: 11, marginTop: 4 },
+  fileChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1
+  },
+  fileName: { fontWeight: 'bold', fontSize: 14 }
 });

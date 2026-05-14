@@ -17,6 +17,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
+import { MATERIAS, GRADOS, SECCIONES, TURNOS } from '../constants/options';
+import SelectInput from '../components/SelectInput';
+import AnimatedBackground from '../components/AnimatedBackground';
 
 const { width } = Dimensions.get('window');
 
@@ -92,9 +95,8 @@ export default function RegisterScreen({ navigation }) {
   return (
     <View style={styles.container}>
 
-      {/* FONDO DECORATIVO */}
-      <View style={styles.bgCircle1} />
-      <View style={styles.bgCircle2} />
+      {/* Fondo animado profesional */}
+      <AnimatedBackground intensity="normal" />
 
       <SafeAreaView style={{ flex: 1 }}>
         <KeyboardAvoidingView
@@ -190,16 +192,51 @@ export default function RegisterScreen({ navigation }) {
                 {/* CAMPOS DINÁMICOS */}
                 {rol === "estudiante" && (
                   <>
-                    <TextInput style={styles.input} placeholder="Grado" value={grado} onChangeText={setGrado}/>
-                    <TextInput style={styles.input} placeholder="Sección" value={seccion} onChangeText={setSeccion}/>
-                    <TextInput style={styles.input} placeholder="Turno" value={turno} onChangeText={setTurno}/>
+                    <SelectInput
+                      placeholder="Selecciona el grado"
+                      title="Grado"
+                      icon="school-outline"
+                      value={grado}
+                      options={GRADOS}
+                      onSelect={setGrado}
+                    />
+                    <SelectInput
+                      placeholder="Selecciona la sección"
+                      title="Sección"
+                      icon="alpha-s-circle-outline"
+                      value={seccion}
+                      options={SECCIONES}
+                      onSelect={setSeccion}
+                    />
+                    <SelectInput
+                      placeholder="Selecciona el turno"
+                      title="Turno"
+                      icon="clock-outline"
+                      value={turno}
+                      options={TURNOS}
+                      onSelect={setTurno}
+                    />
                   </>
                 )}
 
                 {rol === "docente" && (
                   <>
-                    <TextInput style={styles.input} placeholder="Materia" value={materia} onChangeText={setMateria}/>
-                    <TextInput style={styles.input} placeholder="Teléfono" value={telefono} onChangeText={setTelefono}/>
+                    <SelectInput
+                      placeholder="Selecciona tu materia"
+                      title="Materia principal"
+                      icon="book-open-page-variant"
+                      value={materia}
+                      options={MATERIAS}
+                      onSelect={setMateria}
+                    />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Teléfono"
+                      placeholderTextColor={Colors.onSurfaceVariant + '80'}
+                      keyboardType="phone-pad"
+                      value={telefono}
+                      onChangeText={setTelefono}
+                    />
                   </>
                 )}
 

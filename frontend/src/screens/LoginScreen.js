@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
+import AnimatedBackground from '../components/AnimatedBackground';
 
 const { width, height } = Dimensions.get('window');
 
@@ -57,13 +58,8 @@ const handleLogin = async () => {
   return (
     <View style={styles.container}>
 
-      {/* 🔥 FONDO ARREGLADO */}
-      <View style={styles.backgroundDecorSection} pointerEvents="none">
-        <View style={[styles.radialGradient, styles.radialTopLeft]} />
-        <View style={[styles.radialGradient, styles.radialBottomRight]} />
-        <View style={[styles.blurBlob, styles.blob1]} />
-        <View style={[styles.blurBlob, styles.blob2]} />
-      </View>
+      {/* Fondo animado profesional */}
+      <AnimatedBackground intensity="normal" />
 
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView
@@ -155,9 +151,19 @@ const handleLogin = async () => {
                   </View>
                 </View>
 
+                {/* LINK OLVIDÉ MI CONTRASEÑA */}
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('ForgotPassword')}
+                  style={{ alignSelf: 'flex-end', marginTop: -8, marginBottom: 4 }}
+                >
+                  <Text style={{ color: Colors.primary, fontSize: 13, fontWeight: '600' }}>
+                    ¿Olvidaste tu contraseña?
+                  </Text>
+                </TouchableOpacity>
+
                 {/* BOTÓN */}
-                <TouchableOpacity 
-                  activeOpacity={0.8} 
+                <TouchableOpacity
+                  activeOpacity={0.8}
                   style={styles.submitButtonWrapper}
                   onPress={handleLogin}
                 >

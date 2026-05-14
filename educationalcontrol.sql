@@ -88,6 +88,7 @@ CREATE TABLE IF NOT EXISTS tareas (
 
     titulo VARCHAR(150) NOT NULL,
     instrucciones TEXT,
+    archivo VARCHAR(255),
 
     fecha_entrega DATE,
 
@@ -140,6 +141,28 @@ CREATE TABLE IF NOT EXISTS asistencia (
     FOREIGN KEY (estudiante_id)
     REFERENCES usuarios(id)
     ON DELETE CASCADE
+);
+
+-- =========================
+-- PASSWORD RESETS (recuperación de contraseña)
+-- =========================
+CREATE TABLE IF NOT EXISTS password_resets (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+
+    usuario_id INT NOT NULL,
+    codigo VARCHAR(10) NOT NULL,
+
+    expira_en TIMESTAMP NOT NULL,
+    usado BOOLEAN DEFAULT FALSE,
+
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (usuario_id)
+    REFERENCES usuarios(id)
+    ON DELETE CASCADE,
+
+    INDEX idx_pwd_resets_codigo (codigo),
+    INDEX idx_pwd_resets_usuario (usuario_id)
 );
 
 -- =========================

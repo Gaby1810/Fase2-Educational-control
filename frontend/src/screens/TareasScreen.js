@@ -8,7 +8,9 @@ import {
   TouchableOpacity,
   SafeAreaView,
   ActivityIndicator,
-  Alert
+  Alert,
+  Modal,
+  Linking
 } from 'react-native';
 
 import {
@@ -16,8 +18,11 @@ import {
   Ionicons
 } from '@expo/vector-icons';
 
+import * as DocumentPicker from 'expo-document-picker';
+
 import { Colors } from '../constants/colors';
 import { get, post } from '../services/api';
+import API_BASE_URL from '../constants/api';
 import { useAuth } from '../contexts/AuthContext';
 
 const estados = [
@@ -116,12 +121,71 @@ export default function TareasScreen({
     return Colors.tertiary;
   };
 
-  const marcarCompleta = async (item) => {
+  // ============================================
+  // ENTREGA DE TAREA (estudiante) — con archivo
+  // ============================================
+  const [entregaTarea, setEntregaTarea] = useState(null);
+  const [archivoEntrega, setArchivoEntrega] = useState(null);
+  const [enviandoEntrega, setEnviandoEntrega] = useState(false);
+
+  const abrirModalEntrega = (item) => {
+    setEntregaTarea(item);
+    setArchivoEntrega(null);
+  };
+
+  const cerrarModalEntrega = () => {
+    if (enviandoEntrega) return;
+    setEntregaTarea(null);
+    setArchivoEntrega(null);
+  };
+
+  const seleccionarArchivoEntrega = async () => {
     try {
-      await post(`/tareas/${item.id}/entregar`, {});
+      const result = await DocumentPicker.getDocumentAsync({
+        type: '*/*',
+        copyToCacheDirectory: true
+      });
+      if (!result.canceled && result.assets?.[0]) {
+        setArchivoEntrega(result.assets[0]);
+      }
+    } catch (e) {
+      Alert.alert('Error', 'No se pudo seleccionar el archivo');
+    }
+  };
+
+  const enviarEntrega = async () => {
+    if (!entregaTarea) return;
+    try {
+      setEnviandoEntrega(true);
+
+      const formData = new FormData();
+      if (archivoEntrega) {
+        formData.append('archivo', {
+          uri: archivoEntrega.uri,
+          name: archivoEntrega.name,
+          type: archivoEntrega.mimeType || 'application/octet-stream'
+        });
+      }
+
+      await post(`/tareas/${entregaTarea.id}/entregar`, formData);
+      setEntregaTarea(null);
+      setArchivoEntrega(null);
       await obtenerTareas();
     } catch (error) {
-      Alert.alert('No se pudo completar', error.message || 'Intenta de nuevo.');
+      Alert.alert('No se pudo entregar', error.message || 'Intenta de nuevo.');
+    } finally {
+      setEnviandoEntrega(false);
+    }
+  };
+
+  const abrirArchivoTarea = async (archivo) => {
+    if (!archivo) return;
+    const baseUrl = API_BASE_URL.replace('/api', '');
+    const url = `${baseUrl}/uploads/${archivo}`;
+    try {
+      await Linking.openURL(url);
+    } catch (e) {
+      Alert.alert('Error', 'No se pudo abrir el archivo');
     }
   };
 
@@ -297,6 +361,34 @@ export default function TareasScreen({
               </Text>
             )}
 
+            {/* Archivo adjunto del docente */}
+            {!!item.archivo && (
+              <TouchableOpacity
+                style={[styles.attachmentRow, { backgroundColor: Colors.surfaceContainerHighest }]}
+                onPress={() => abrirArchivoTarea(item.archivo)}
+              >
+                <MaterialCommunityIcons name="paperclip" size={18} color={Colors.primary} />
+                <Text style={[styles.attachmentText, { color: Colors.primary }]} numberOfLines={1}>
+                  Archivo del docente
+                </Text>
+                <MaterialCommunityIcons name="download" size={18} color={Colors.primary} />
+              </TouchableOpacity>
+            )}
+
+            {/* Archivo entregado por el estudiante */}
+            {!esDocente && !!item.archivo_entregado && (
+              <TouchableOpacity
+                style={[styles.attachmentRow, { backgroundColor: Colors.secondary + '22' }]}
+                onPress={() => abrirArchivoTarea(item.archivo_entregado)}
+              >
+                <MaterialCommunityIcons name="check-circle" size={18} color={Colors.secondary} />
+                <Text style={[styles.attachmentText, { color: Colors.secondary }]} numberOfLines={1}>
+                  Tu entrega
+                </Text>
+                <MaterialCommunityIcons name="download" size={18} color={Colors.secondary} />
+              </TouchableOpacity>
+            )}
+
             <View style={styles.divider} />
 
             <View style={styles.cardFooter}>
@@ -314,10 +406,10 @@ export default function TareasScreen({
               {!esDocente && item.estado_entrega !== 'completa' ? (
                 <TouchableOpacity
                   style={[styles.completeBtn, { borderColor: Colors.secondary }]}
-                  onPress={() => marcarCompleta(item)}
+                  onPress={() => abrirModalEntrega(item)}
                 >
                   <Text style={[styles.completeBtnText, { color: Colors.secondary }]}>
-                    Completar
+                    Entregar
                   </Text>
                 </TouchableOpacity>
               ) : (
@@ -331,9 +423,163 @@ export default function TareasScreen({
 
       </ScrollView>
 
+
+      {/* ============================== */}
+      {/* MODAL: ENTREGA DE TAREA        */}
+      {/* ============================== */}
+      <Modal
+        visible={!!entregaTarea}
+        transparent
+        animationType="fade"
+        onRequestClose={cerrarModalEntrega}
+      >
+        <View style={modalStyles.backdrop}>
+          <View style={[modalStyles.card, { backgroundColor: Colors.surfaceContainerHigh }]}>
+
+            <TouchableOpacity
+              style={modalStyles.closeBtn}
+              onPress={cerrarModalEntrega}
+              hitSlop={10}
+            >
+              <Ionicons name="close" size={22} color={Colors.onSurface} />
+            </TouchableOpacity>
+
+            <View style={[modalStyles.iconCircle, { backgroundColor: Colors.secondary + '22' }]}>
+              <MaterialCommunityIcons name="upload" size={28} color={Colors.secondary} />
+            </View>
+
+            <Text style={[modalStyles.title, { color: Colors.onSurface }]}>
+              Entregar tarea
+            </Text>
+            <Text style={[modalStyles.subtitle, { color: Colors.onSurfaceVariant }]} numberOfLines={2}>
+              {entregaTarea?.titulo}
+            </Text>
+
+
+            {!archivoEntrega ? (
+              <TouchableOpacity
+                style={[modalStyles.uploadBox, { borderColor: Colors.outlineVariant }]}
+                onPress={seleccionarArchivoEntrega}
+                activeOpacity={0.8}
+              >
+                <MaterialCommunityIcons name="cloud-upload-outline" size={40} color={Colors.primary} />
+                <Text style={[modalStyles.uploadText, { color: Colors.onSurface }]}>
+                  Toca para subir tu archivo
+                </Text>
+                <Text style={[modalStyles.uploadHint, { color: Colors.onSurfaceVariant }]}>
+                  PDF, Word, imagen, etc. (máx 25 MB)
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={[modalStyles.fileChip, { backgroundColor: Colors.surfaceContainerHighest, borderColor: Colors.outlineVariant }]}>
+                <MaterialCommunityIcons name="file-document-outline" size={22} color={Colors.primary} />
+                <View style={{ flex: 1, marginLeft: 10 }}>
+                  <Text style={[modalStyles.fileName, { color: Colors.onSurface }]} numberOfLines={1}>
+                    {archivoEntrega.name}
+                  </Text>
+                  <Text style={{ color: Colors.onSurfaceVariant, fontSize: 11 }}>
+                    {archivoEntrega.size ? `${(archivoEntrega.size / 1024).toFixed(1)} KB` : 'Listo para subir'}
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={() => setArchivoEntrega(null)} hitSlop={10}>
+                  <MaterialCommunityIcons name="close-circle" size={22} color={Colors.error} />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            <Text style={[modalStyles.hint, { color: Colors.onSurfaceVariant }]}>
+              También puedes entregar sin archivo.
+            </Text>
+
+
+            <TouchableOpacity
+              style={[
+                modalStyles.submit,
+                {
+                  backgroundColor: Colors.primary,
+                  opacity: enviandoEntrega ? 0.6 : 1
+                }
+              ]}
+              onPress={enviarEntrega}
+              disabled={enviandoEntrega}
+            >
+              {enviandoEntrega
+                ? <ActivityIndicator color={Colors.onPrimary} />
+                : <Text style={[modalStyles.submitText, { color: Colors.onPrimary }]}>ENTREGAR</Text>
+              }
+            </TouchableOpacity>
+
+          </View>
+        </View>
+      </Modal>
+
+
     </SafeAreaView>
   );
 }
+
+const modalStyles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24
+  },
+  card: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: 24,
+    padding: 26,
+    alignItems: 'center'
+  },
+  closeBtn: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  iconCircle: {
+    width: 60, height: 60, borderRadius: 30,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 12, marginTop: 4
+  },
+  title: { fontSize: 20, fontWeight: 'bold', marginBottom: 6, textAlign: 'center' },
+  subtitle: { fontSize: 13, textAlign: 'center', marginBottom: 22, maxWidth: 280 },
+  uploadBox: {
+    width: '100%',
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderRadius: 14,
+    padding: 22,
+    alignItems: 'center'
+  },
+  uploadText: { fontWeight: '600', marginTop: 8, fontSize: 14 },
+  uploadHint: { fontSize: 11, marginTop: 4, textAlign: 'center' },
+  fileChip: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1
+  },
+  fileName: { fontWeight: 'bold', fontSize: 14 },
+  hint: { fontSize: 11, marginTop: 12, textAlign: 'center' },
+  submit: {
+    width: '100%',
+    height: 52,
+    borderRadius: 14,
+    marginTop: 18,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  submitText: { fontWeight: 'bold', fontSize: 15, letterSpacing: 1 }
+});
 
 const styles = StyleSheet.create({
 
@@ -431,6 +677,21 @@ const styles = StyleSheet.create({
   chipText: {
     fontSize: 12,
     fontWeight: '800'
+  },
+
+  attachmentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    marginTop: 10,
+    gap: 8
+  },
+  attachmentText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '700'
   },
 
   emptyContainer: {
