@@ -16,7 +16,8 @@ import { useAuth } from '../contexts/AuthContext';
 
 export default function DashboardScreen({ navigation }) {
 
-  const { logout } = useAuth();
+  const { logout, usuario } = useAuth();
+  const esDocente = usuario?.rol === 'docente';
 
   const handleLogout = () => {
     Alert.alert(
@@ -49,11 +50,11 @@ export default function DashboardScreen({ navigation }) {
       route: "ClasesList" // <--- Ruta de navegación
     },
     {
-      title: "Total estudiantes",
+      title: esDocente ? "Asistencia" : "Perfil",
       desc: "Comparte tu experiencia con tus compañeros.",
       image: "https://cdn-icons-png.flaticon.com/512/201/201818.png",
-      icon: "account-group",
-      route: "Asistencia" 
+      icon: esDocente ? "account-group" : "account-circle",
+      route: esDocente ? "ClasesList" : "Perfil"
     },
     {
       title: "Tareas activas",
@@ -125,9 +126,9 @@ export default function DashboardScreen({ navigation }) {
           <Text style={styles.navText}>Clases</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.navItem}>
-          <MaterialCommunityIcons name="clipboard-account-outline" size={24} color="#777" />
-          <Text style={styles.navText}>Estudiantes</Text>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate(esDocente ? 'ClasesList' : 'Perfil')}>
+          <MaterialCommunityIcons name={esDocente ? "clipboard-account-outline" : "account-circle-outline"} size={24} color="#777" />
+          <Text style={styles.navText}>{esDocente ? 'Estudiantes' : 'Perfil'}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.navItem} onPress={handleLogout}>
