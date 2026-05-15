@@ -1,3 +1,7 @@
+// ===============================
+// DashboardScreen.jsx
+// ===============================
+
 import React from 'react';
 import {
   View,
@@ -17,9 +21,11 @@ import { useAuth } from '../contexts/AuthContext';
 export default function DashboardScreen({ navigation }) {
 
   const { logout, usuario } = useAuth();
+
   const esDocente = usuario?.rol === 'docente';
 
   const handleLogout = () => {
+
     Alert.alert(
       "Cerrar sesión",
       "¿Estás seguro que deseas cerrar sesión?",
@@ -29,114 +35,229 @@ export default function DashboardScreen({ navigation }) {
           text: "Sí, salir",
           style: "destructive",
           onPress: async () => {
+
             await logout();
+
             navigation.reset({
               index: 0,
               routes: [{ name: "Home" }],
             });
+
           }
         }
       ]
     );
   };
 
+  // ===============================
+  // CARDS SEGÚN EL ROL
+  // ===============================
 
-  const cards = [
-    {
-      title: "Total clases",
-      desc: "Explora tus materias y accede a todo tu contenido académico.",
-      image: "https://cdn-icons-png.flaticon.com/512/3135/3135755.png",
-      icon: "book-open-page-variant",
-      route: "ClasesList" // <--- Ruta de navegación
-    },
-    {
-      title: esDocente ? "Asistencia" : "Perfil",
-      desc: "Comparte tu experiencia con tus compañeros.",
-      image: "https://cdn-icons-png.flaticon.com/512/201/201818.png",
-      icon: esDocente ? "account-group" : "account-circle",
-      route: esDocente ? "ClasesList" : "Perfil"
-    },
-    {
-      title: "Tareas activas",
-      desc: "Mantente al día con tus deberes y entregas.",
-      image: "https://cdn-icons-png.flaticon.com/512/4341/4341139.png",
-      icon: "clipboard-text",
-      route: "Tareas"
-    },
-    {
-      title: "Promedio general",
-      desc: "Visualiza tu progreso académico fácilmente.",
-      image: "https://cdn-icons-png.flaticon.com/512/3135/3135789.png",
-      icon: "chart-bar",
-      route: "Notas"
-    }
-  ];
+  const cards = esDocente
+    ? [
+        {
+          title: "Mis clases",
+          desc: "Administra tus clases creadas.",
+          image: "https://cdn-icons-png.flaticon.com/512/3135/3135755.png",
+          icon: "book-open-page-variant",
+          route: "ClasesList"
+        },
+        {
+          title: "Asistencia",
+          desc: "Gestiona asistencia de estudiantes.",
+          image: "https://cdn-icons-png.flaticon.com/512/201/201818.png",
+          icon: "account-group",
+          route: "ClasesList"
+        },
+        {
+          title: "Tareas",
+          desc: "Publica tareas y actividades.",
+          image: "https://cdn-icons-png.flaticon.com/512/4341/4341139.png",
+          icon: "clipboard-text",
+          route: "ClasesList"
+        },
+        {
+          title: "Notas",
+          desc: "Administra calificaciones.",
+          image: "https://cdn-icons-png.flaticon.com/512/3135/3135789.png",
+          icon: "chart-bar",
+          route: "ClasesList"
+        }
+      ]
+    : [
+        {
+          title: "Mis clases",
+          desc: "Clases en las que estás inscrito.",
+          image: "https://cdn-icons-png.flaticon.com/512/3135/3135755.png",
+          icon: "book-open-page-variant",
+          route: "ClasesList"
+        },
+        {
+          title: "Mi perfil",
+          desc: "Visualiza tu información.",
+          image: "https://cdn-icons-png.flaticon.com/512/201/201818.png",
+          icon: "account-circle",
+          route: "Perfil"
+        }
+      ];
 
   return (
+
     <SafeAreaView style={styles.container}>
+
+      {/* HEADER */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.goBack()}>
-          <MaterialCommunityIcons name="chevron-left" size={28} color="#fff" />
+
+        <TouchableOpacity
+          style={styles.headerBtn}
+          onPress={() => navigation.goBack()}
+        >
+          <MaterialCommunityIcons
+            name="chevron-left"
+            size={28}
+            color="#fff"
+          />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.headerBtn} onPress={handleLogout}>
-          <MaterialCommunityIcons name="logout" size={22} color="#fff" />
+
+        <TouchableOpacity
+          style={styles.headerBtn}
+          onPress={handleLogout}
+        >
+          <MaterialCommunityIcons
+            name="logout"
+            size={22}
+            color="#fff"
+          />
         </TouchableOpacity>
+
       </View>
 
+
       <ScrollView showsVerticalScrollIndicator={false}>
+
+        {/* BANNER */}
         <View style={styles.bannerContainer}>
+
           <Image
-            source={{ uri: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f' }}
+            source={{
+              uri: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f'
+            }}
             style={styles.banner}
           />
+
           <View style={styles.overlay}>
-            <Text style={styles.bannerTitle}>Bienvenido a Educational Control</Text>
+            <Text style={styles.bannerTitle}>
+              Bienvenido a Educational Control
+            </Text>
           </View>
+
         </View>
 
+
+        {/* CARDS */}
         <View style={styles.cardsContainer}>
+
           {cards.map((item, index) => (
-            <TouchableOpacity 
-              key={index} 
+
+            <TouchableOpacity
+              key={index}
               style={styles.card}
-              onPress={() => item.route && navigation.navigate(item.route)} // <--- VÍNCULO REAL
+              onPress={() => navigation.navigate(item.route)}
             >
-              <Image source={{ uri: item.image }} style={styles.cardImage} />
+
+              <Image
+                source={{ uri: item.image }}
+                style={styles.cardImage}
+              />
+
               <View style={styles.cardContent}>
+
                 <View style={styles.cardTitleRow}>
-                  <MaterialCommunityIcons name={item.icon} size={18} color={Colors.primary} />
-                  <Text style={styles.cardTitle}>{item.title}</Text>
+
+                  <MaterialCommunityIcons
+                    name={item.icon}
+                    size={18}
+                    color={Colors.primary}
+                  />
+
+                  <Text style={styles.cardTitle}>
+                    {item.title}
+                  </Text>
+
                 </View>
-                <Text style={styles.cardDesc}>{item.desc}</Text>
+
+                <Text style={styles.cardDesc}>
+                  {item.desc}
+                </Text>
+
               </View>
+
             </TouchableOpacity>
+
           ))}
+
         </View>
+
       </ScrollView>
 
-      {/* NAVBAR VINCULADO */}
+
+      {/* NAVBAR */}
       <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Dashboard')}>
-          <MaterialCommunityIcons name="home-outline" size={24} color={Colors.primary} />
+
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => navigation.navigate('Dashboard')}
+        >
+          <MaterialCommunityIcons
+            name="home-outline"
+            size={24}
+            color={Colors.primary}
+          />
           <Text style={styles.navTextActive}>Inicio</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('ClasesList')}>
-          <MaterialCommunityIcons name="book-outline" size={24} color="#777" />
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => navigation.navigate('ClasesList')}
+        >
+          <MaterialCommunityIcons
+            name="book-outline"
+            size={24}
+            color="#777"
+          />
           <Text style={styles.navText}>Clases</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate(esDocente ? 'ClasesList' : 'Perfil')}>
-          <MaterialCommunityIcons name={esDocente ? "clipboard-account-outline" : "account-circle-outline"} size={24} color="#777" />
-          <Text style={styles.navText}>{esDocente ? 'Estudiantes' : 'Perfil'}</Text>
-        </TouchableOpacity>
+        {!esDocente && (
+          <TouchableOpacity
+            style={styles.navItem}
+            onPress={() => navigation.navigate('Perfil')}
+          >
+            <MaterialCommunityIcons
+              name="account-circle-outline"
+              size={24}
+              color="#777"
+            />
+            <Text style={styles.navText}>Perfil</Text>
+          </TouchableOpacity>
+        )}
 
-        <TouchableOpacity style={styles.navItem} onPress={handleLogout}>
-          <MaterialCommunityIcons name="logout" size={24} color="#777" />
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={handleLogout}
+        >
+          <MaterialCommunityIcons
+            name="logout"
+            size={24}
+            color="#777"
+          />
           <Text style={styles.navText}>Salir</Text>
         </TouchableOpacity>
+
       </View>
+
     </SafeAreaView>
+
   );
 }
 
@@ -193,7 +314,6 @@ const styles = StyleSheet.create({
 
   cardsContainer: {
     padding: 15,
-    gap: 15,
   },
 
   card: {
@@ -203,6 +323,7 @@ const styles = StyleSheet.create({
     padding: 12,
     elevation: 3,
     alignItems: 'center',
+    marginBottom: 15,
   },
 
   cardImage: {
@@ -220,13 +341,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
-    gap: 6,
   },
 
   cardTitle: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#222',
+    marginLeft: 6,
   },
 
   cardDesc: {
