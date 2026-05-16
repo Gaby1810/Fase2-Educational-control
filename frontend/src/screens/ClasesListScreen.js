@@ -30,8 +30,32 @@ const { width } = Dimensions.get('window');
 
 export default function ClasesListScreen({ navigation }) {
 
-  const { usuario } = useAuth();
+  const { usuario, logout } = useAuth();
   const esDocente = usuario?.rol === 'docente';
+
+  // ¿Es la pantalla raíz? (estudiante que entró directo aquí tras login)
+  const esRaiz = !navigation.canGoBack();
+
+  const handleLogout = () => {
+    Alert.alert(
+      "Cerrar sesión",
+      "¿Estás seguro que deseas cerrar sesión?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Sí, salir",
+          style: "destructive",
+          onPress: async () => {
+            await logout();
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "Home" }]
+            });
+          }
+        }
+      ]
+    );
+  };
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [clases, setClases] = useState([]);
@@ -234,20 +258,20 @@ export default function ClasesListScreen({ navigation }) {
         ]}
       >
 
-        <TouchableOpacity
-          style={styles.headerBtn}
-          onPress={() =>
-            navigation.goBack()
-          }
-        >
-
-          <Ionicons
-            name="chevron-back"
-            size={24}
-            color={Colors.primary}
-          />
-
-        </TouchableOpacity>
+        {esRaiz ? (
+          <View style={{ width: 35 }} />
+        ) : (
+          <TouchableOpacity
+            style={styles.headerBtn}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons
+              name="chevron-back"
+              size={24}
+              color={Colors.primary}
+            />
+          </TouchableOpacity>
+        )}
 
         <Text
           style={[
@@ -261,7 +285,34 @@ export default function ClasesListScreen({ navigation }) {
           Educational Control
         </Text>
 
-        <View style={{ width: 35 }} />
+        {esRaiz ? (
+          <View style={{ flexDirection: 'row', gap: 6 }}>
+            {!esDocente && (
+              <TouchableOpacity
+                style={styles.headerBtn}
+                onPress={() => navigation.navigate('Perfil')}
+              >
+                <Ionicons
+                  name="person-outline"
+                  size={20}
+                  color={Colors.primary}
+                />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={styles.headerBtn}
+              onPress={handleLogout}
+            >
+              <Ionicons
+                name="log-out-outline"
+                size={20}
+                color={Colors.primary}
+              />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={{ width: 35 }} />
+        )}
 
       </View>
 
@@ -285,7 +336,7 @@ export default function ClasesListScreen({ navigation }) {
               }
             ]}
           >
-            Clases
+            {esDocente ? 'Clases' : 'Mis Clases'}
           </Text>
 
           {esDocente && (
