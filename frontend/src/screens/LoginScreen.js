@@ -45,12 +45,12 @@ const handleLogin = async () => {
 
     // Estudiante → directo a sus clases (estilo Classroom)
     // Docente   → al panel
-    const esEstudiante = res.usuario?.rol === 'estudiante';
-
-    navigation.reset({
-      index: 0,
-      routes: [{ name: esEstudiante ? "ClasesList" : "Dashboard" }],
-    });
+    const { rol } = res.usuario;
+    const destino =
+      rol === 'estudiante'    ? 'ClasesList'     :
+      rol === 'administrador' ? 'AdminDashboard' :
+      'Dashboard';
+    navigation.reset({ index: 0, routes: [{ name: destino }] });
 
   } catch (error) {
 

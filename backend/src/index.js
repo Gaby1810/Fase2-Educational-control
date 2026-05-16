@@ -31,6 +31,7 @@ app.use('/api/materiales', require('./routes/materiales'));
 app.use('/api/asistencia', require('./routes/asistencia'));
 app.use('/api/tareas', require('./routes/tareas'));
 app.use('/api/notas', require('./routes/notas'));
+app.use('/api/admin', require('./routes/admin'));   // ADMIN
 
 // 404
 app.use((req, res) => {

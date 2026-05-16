@@ -10,7 +10,7 @@ import Constants from 'expo-constants';
  * - Web / iOS simulator: localhost.
  */
 const PORT = 3000;
-const LAN_IP_FALLBACK = '192.168.0.5';
+const LAN_IP_FALLBACK = '192.168.0.3';
 
 const getHostFromExpo = () => {
   // SDK 49+: hostUri tiene el formato "192.168.x.x:8081"
