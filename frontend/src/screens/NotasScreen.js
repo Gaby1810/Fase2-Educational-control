@@ -7,11 +7,15 @@ import {
   TouchableOpacity,
   TextInput,
   SafeAreaView,
-  ActivityIndicator
+  ActivityIndicator,
+  Modal,
+  Alert,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
-import { get } from '../services/api';
+import { get, post } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function NotasScreen({ route, navigation }) {
@@ -27,6 +31,10 @@ export default function NotasScreen({ route, navigation }) {
   const [resumenGeneral, setResumenGeneral] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busqueda, setBusqueda] = useState('');
+
+  const [modalVisible, setModalVisible] = useState(false);
+  const [estudiantes, setEstudiantes] = useState([]);
+  const [formNota, setFormNota] = useState({ estudiante_id: '', evaluacion: '', calificacion: '' });
 
   useEffect(() => {
     cargarNotas();
@@ -58,6 +66,42 @@ export default function NotasScreen({ route, navigation }) {
       setResumenGeneral(null);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const abrirModal = async () => {
+    try {
+      const data = await get(`/clases/${claseId}/estudiantes`);
+      setEstudiantes(data || []);
+      setFormNota({ estudiante_id: '', evaluacion: '', calificacion: '' });
+      setModalVisible(true);
+    } catch (e) {
+      Alert.alert("Error", "No se pudieron cargar los estudiantes");
+    }
+  };
+
+  const guardarNota = async () => {
+    if (!formNota.estudiante_id || !formNota.evaluacion || !formNota.calificacion) {
+      Alert.alert("Error", "Todos los campos son obligatorios");
+      return;
+    }
+    const calif = Number(formNota.calificacion);
+    if (calif < 0 || calif > 100 || isNaN(calif)) {
+      Alert.alert("Error", "La calificación debe estar entre 0 y 100");
+      return;
+    }
+
+    try {
+      await post('/notas/guardar', {
+        clase_id: claseId,
+        estudiante_id: formNota.estudiante_id,
+        evaluacion: formNota.evaluacion,
+        calificacion: calif
+      });
+      setModalVisible(false);
+      cargarNotas();
+    } catch (e) {
+      Alert.alert("Error", e.response?.data?.error || "No se pudo guardar la nota");
     }
   };
 
@@ -298,6 +342,60 @@ export default function NotasScreen({ route, navigation }) {
           ))}
         </View>
       </ScrollView>
+
+      {esDocente && !modoGeneral && (
+        <TouchableOpacity style={styles.fab} onPress={abrirModal}>
+          <Ionicons name="add" size={28} color="#FFF" />
+        </TouchableOpacity>
+      )}
+
+      <Modal visible={modalVisible} transparent={true} animationType="fade">
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalContainer}>
+          <View style={[styles.modalContent, { backgroundColor: Colors.surfaceContainerLow }]}>
+            <Text style={[styles.modalTitle, { color: Colors.onSurface }]}>Registrar Nota</Text>
+
+            <ScrollView style={{maxHeight: 120, marginBottom: 10}}>
+              {estudiantes.map(est => (
+                <TouchableOpacity
+                  key={est.id}
+                  style={[styles.estudianteRow, formNota.estudiante_id === est.id && { backgroundColor: Colors.primaryContainer }]}
+                  onPress={() => setFormNota({ ...formNota, estudiante_id: est.id })}
+                >
+                  <Text style={{ color: formNota.estudiante_id === est.id ? Colors.onPrimaryContainer : Colors.onSurface }}>
+                    {est.nombre}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <TextInput
+              style={[styles.inputModal, { color: Colors.onSurface, borderColor: Colors.outline }]}
+              placeholder="Evaluación (Ej. Examen final)"
+              placeholderTextColor={Colors.onSurfaceVariant}
+              value={formNota.evaluacion}
+              onChangeText={(text) => setFormNota({ ...formNota, evaluacion: text })}
+            />
+            <TextInput
+              style={[styles.inputModal, { color: Colors.onSurface, borderColor: Colors.outline }]}
+              placeholder="Calificación (0-100)"
+              placeholderTextColor={Colors.onSurfaceVariant}
+              keyboardType="numeric"
+              value={formNota.calificacion}
+              onChangeText={(text) => setFormNota({ ...formNota, calificacion: text })}
+            />
+
+            <View style={styles.modalBtns}>
+              <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.modalBtnCancel}>
+                <Text style={{ color: Colors.onSurface }}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={guardarNota} style={[styles.modalBtnSave, { backgroundColor: Colors.primary }]}>
+                <Text style={{ color: '#FFF' }}>Guardar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
     </SafeAreaView>
   );
 }
@@ -364,5 +462,62 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center'
   },
-  gradeText: { color: '#001645', fontWeight: 'bold', fontSize: 16 }
+  gradeText: { color: '#001645', fontWeight: 'bold', fontSize: 16 },
+  fab: {
+    position: 'absolute',
+    bottom: 25,
+    right: 25,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 3
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    padding: 20
+  },
+  modalContent: {
+    borderRadius: 15,
+    padding: 20,
+    elevation: 5
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 15
+  },
+  estudianteRow: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333'
+  },
+  inputModal: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 15
+  },
+  modalBtns: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 10
+  },
+  modalBtnCancel: {
+    padding: 10,
+    marginRight: 10
+  },
+  modalBtnSave: {
+    padding: 10,
+    borderRadius: 8,
+    paddingHorizontal: 20
+  }
 });

@@ -19,8 +19,11 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { get } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
-const NAVY = '#0B2C74';
-const LIGHT_BG = '#F5F6FA';
+import { Colors } from '../constants/colors';
+
+// Remove hardcoded colors to use Colors
+// const NAVY = '#0B2C74';
+// const LIGHT_BG = '#F5F6FA';
 
 export default function AdminDashboardScreen({ navigation }) {
 
@@ -73,8 +76,8 @@ export default function AdminDashboardScreen({ navigation }) {
           label: 'Reportes',
           value: null,
           icon: 'bar-chart',
-          color: '#E8EEFF',
-          iconColor: NAVY,
+          color: Colors.surfaceContainerHighest,
+          iconColor: Colors.primary,
           onPress: () => navigation.navigate('AdminReportes'),
         },
         {
@@ -108,7 +111,7 @@ export default function AdminDashboardScreen({ navigation }) {
   const iconoActividad = (tipo, subtipo) => {
     if (tipo === 'usuario_creado') {
       if (subtipo === 'docente')       return { name: 'person-add', color: '#00897B' };
-      if (subtipo === 'administrador') return { name: 'shield',     color: NAVY };
+      if (subtipo === 'administrador') return { name: 'shield',     color: Colors.primary };
       return { name: 'person-add', color: '#E64A19' };
     }
     return { name: 'add-circle', color: '#888' };
@@ -130,15 +133,15 @@ export default function AdminDashboardScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: Colors.background }]}>
 
       {/* HEADER */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: Colors.surfaceContainerHighest }]}>
         <TouchableOpacity style={styles.headerBtn} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={22} color="#fff" />
+          <Ionicons name="log-out-outline" size={22} color={Colors.primary} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.headerBtn}>
-          <Ionicons name="notifications-outline" size={22} color="#fff" />
+          <Ionicons name="notifications-outline" size={22} color={Colors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -149,13 +152,13 @@ export default function AdminDashboardScreen({ navigation }) {
 
         {/* SALUDO */}
         <View style={styles.greeting}>
-          <Text style={styles.greetTitle}>Hola, Administrador 👋</Text>
-          <Text style={styles.greetSub}>Aquí tienes un resumen del sistema hoy.</Text>
+          <Text style={[styles.greetTitle, { color: Colors.onSurface }]}>Hola, Administrador 👋</Text>
+          <Text style={[styles.greetSub, { color: Colors.onSurfaceVariant }]}>Aquí tienes un resumen del sistema hoy.</Text>
         </View>
 
         {/* STATS */}
         {loading ? (
-          <ActivityIndicator size="large" color={NAVY} style={{ marginTop: 40 }} />
+          <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: 40 }} />
         ) : (
           <>
             <View style={styles.statsGrid}>
@@ -167,7 +170,7 @@ export default function AdminDashboardScreen({ navigation }) {
                   activeOpacity={0.8}
                 >
                   <Ionicons name={card.icon} size={28} color={card.iconColor} />
-                  <Text style={styles.statLabel}>{card.label}</Text>
+                  <Text style={[styles.statLabel, { color: Colors.onSurfaceVariant }]}>{card.label}</Text>
                   {card.value !== null && (
                     <Text style={[styles.statValue, { color: card.iconColor }]}>
                       {card.value?.toLocaleString() ?? '–'}
@@ -180,9 +183,9 @@ export default function AdminDashboardScreen({ navigation }) {
             {/* ACTIVIDAD RECIENTE */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Actividad reciente</Text>
+                <Text style={[styles.sectionTitle, { color: Colors.onSurface }]}>Actividad reciente</Text>
                 <TouchableOpacity onPress={() => navigation.navigate('AdminUsuarios')}>
-                  <Text style={styles.verTodo}>VER TODO</Text>
+                  <Text style={[styles.verTodo, { color: Colors.primary }]}>VER TODO</Text>
                 </TouchableOpacity>
               </View>
 
@@ -197,8 +200,8 @@ export default function AdminDashboardScreen({ navigation }) {
                         <Ionicons name={icono.name} size={20} color={icono.color} />
                       </View>
                       <View style={styles.actContent}>
-                        <Text style={styles.actTitle}>{labelActividad(item)}</Text>
-                        <Text style={styles.actSub}>
+                        <Text style={[styles.actTitle, { color: Colors.onSurface }]}>{labelActividad(item)}</Text>
+                        <Text style={[styles.actSub, { color: Colors.onSurfaceVariant }]}>
                           {item.titulo} • {item.subtitulo}
                         </Text>
                       </View>
@@ -214,7 +217,7 @@ export default function AdminDashboardScreen({ navigation }) {
       </ScrollView>
 
       {/* BOTTOM NAV */}
-      <View style={styles.bottomNav}>
+      <View style={[styles.bottomNav, { backgroundColor: Colors.surfaceContainerLowest, borderColor: Colors.outlineVariant }]}>
         <NavItem icon="home" label="Inicio" active onPress={() => {}} />
         <NavItem icon="book-outline" label="Clases" onPress={() => navigation.navigate('AdminClases')} />
         <NavItem icon="people-outline" label="Usuarios" onPress={() => navigation.navigate('AdminUsuarios')} />
@@ -228,17 +231,16 @@ export default function AdminDashboardScreen({ navigation }) {
 function NavItem({ icon, label, active, onPress }) {
   return (
     <TouchableOpacity style={styles.navItem} onPress={onPress}>
-      <Ionicons name={icon} size={24} color={active ? NAVY : '#888'} />
-      <Text style={[styles.navLabel, active && { color: NAVY }]}>{label}</Text>
+      <Ionicons name={icon} size={24} color={active ? Colors.primary : Colors.outline} />
+      <Text style={[styles.navLabel, { color: Colors.outline }, active && { color: Colors.primary }]}>{label}</Text>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  container:    { flex: 1, backgroundColor: LIGHT_BG },
+  container:    { flex: 1 },
   header: {
     height: 60,
-    backgroundColor: NAVY,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
@@ -247,7 +249,7 @@ const styles = StyleSheet.create({
   },
   headerBtn: {
     width: 38, height: 38, borderRadius: 19,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(128,128,128,0.1)',
     alignItems: 'center', justifyContent: 'center',
   },
   greeting: { paddingHorizontal: 20, paddingTop: 22, paddingBottom: 8 },
@@ -274,7 +276,7 @@ const styles = StyleSheet.create({
   section:       { paddingHorizontal: 20, marginTop: 24, marginBottom: 10 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   sectionTitle:  { fontSize: 17, fontWeight: '700', color: '#111' },
-  verTodo:       { fontSize: 12, color: NAVY, fontWeight: '600' },
+  verTodo:       { fontSize: 12, color: Colors.primary, fontWeight: '600' },
   emptyText:     { color: '#999', textAlign: 'center', marginTop: 10 },
 
   actItem: {

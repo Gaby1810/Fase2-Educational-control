@@ -10,7 +10,8 @@ import {
   View,
   TouchableOpacity,
   ScrollView,
-  StatusBar
+  StatusBar,
+  Alert
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,6 +19,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { Colors } from '../constants/colors';
 import { useAuth } from '../contexts/AuthContext';
+import { del } from '../services/api';
 
 export default function DetalleClaseScreen({ navigation, route }) {
 
@@ -48,6 +50,44 @@ export default function DetalleClaseScreen({ navigation, route }) {
 
     );
   }
+
+  const handleAbandonar = () => {
+    Alert.alert(
+      "Abandonar Clase",
+      "¿Estás seguro de que deseas abandonar esta clase? Perderás acceso a los materiales, tareas y calificaciones.",
+      [
+        { text: "Cancelar", style: "cancel" },
+        { text: "Abandonar", style: "destructive", onPress: async () => {
+           try {
+             await del(`/clases/${clase.id}/abandonar`);
+             Alert.alert("Éxito", "Has abandonado la clase.");
+             navigation.navigate('ClasesList');
+           } catch (error) {
+             Alert.alert("Error", error.message || "No se pudo abandonar la clase");
+           }
+        }}
+      ]
+    );
+  };
+
+  const handleEliminar = () => {
+    Alert.alert(
+      "Eliminar Clase",
+      "¿Estás seguro de que deseas eliminar esta clase PERMANENTEMENTE? Se borrarán todas las tareas, materiales, notas y estudiantes inscritos.",
+      [
+        { text: "Cancelar", style: "cancel" },
+        { text: "Eliminar", style: "destructive", onPress: async () => {
+           try {
+             await del(`/clases/${clase.id}`);
+             Alert.alert("Éxito", "Clase eliminada permanentemente.");
+             navigation.navigate('ClasesList');
+           } catch (error) {
+             Alert.alert("Error", error.message || "No se pudo eliminar la clase");
+           }
+        }}
+      ]
+    );
+  };
 
   // ===============================
   // SECCIONES SEGÚN ROL
@@ -98,6 +138,18 @@ export default function DetalleClaseScreen({ navigation, route }) {
               claseId: clase.id,
               nombreClase: clase.nombre
             })
+        },
+        {
+          key: 'estudiantes',
+          titulo: 'Estudiantes',
+          descripcion: 'Gestión de alumnos',
+          icono: 'account-group',
+          color: '#F59E0B',
+          onPress: () =>
+            navigation.navigate('Estudiantes', {
+              claseId: clase.id,
+              nombreClase: clase.nombre
+            })
         }
       ]
     : [
@@ -118,6 +170,30 @@ export default function DetalleClaseScreen({ navigation, route }) {
           color: Colors.tertiary,
           onPress: () =>
             navigation.navigate('Tareas', {
+              claseId: clase.id,
+              nombreClase: clase.nombre
+            })
+        },
+        {
+          key: 'notas',
+          titulo: 'Notas',
+          descripcion: 'Mis calificaciones',
+          icono: 'chart-bar',
+          color: Colors.secondary,
+          onPress: () =>
+            navigation.navigate('Notas', {
+              claseId: clase.id,
+              tareaNombre: clase.nombre
+            })
+        },
+        {
+          key: 'asistencia',
+          titulo: 'Asistencia',
+          descripcion: 'Mi registro',
+          icono: 'account-check-outline',
+          color: '#78dc77',
+          onPress: () =>
+            navigation.navigate('Asistencia', {
               claseId: clase.id,
               nombreClase: clase.nombre
             })
@@ -147,7 +223,7 @@ export default function DetalleClaseScreen({ navigation, route }) {
 
           <TouchableOpacity
             onPress={() => navigation.goBack()}
-            style={styles.headerBtn}
+            style={[styles.headerBtn, { backgroundColor: Colors.surfaceContainerLow }]}
           >
             <Ionicons
               name="chevron-back"
@@ -165,7 +241,15 @@ export default function DetalleClaseScreen({ navigation, route }) {
             Detalle de clase
           </Text>
 
-          <View style={{ width: 35 }} />
+          {esDocente ? (
+            <TouchableOpacity onPress={handleEliminar} style={[styles.headerBtn, { backgroundColor: Colors.surfaceContainerLow }]}>
+              <Ionicons name="trash-outline" size={22} color={Colors.error} />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity onPress={handleAbandonar} style={[styles.headerBtn, { backgroundColor: Colors.surfaceContainerLow }]}>
+              <Ionicons name="exit-outline" size={22} color={Colors.error} />
+            </TouchableOpacity>
+          )}
 
         </View>
 
@@ -334,7 +418,6 @@ const styles = StyleSheet.create({
     width: 35,
     height: 35,
     borderRadius: 10,
-    backgroundColor: '#FFF',
     alignItems: 'center',
     justifyContent: 'center'
   },

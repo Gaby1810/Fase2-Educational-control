@@ -4,6 +4,7 @@ const db = require("../db");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { enviarCodigoRecuperacion } = require("../services/email");
+const requireAuth = require("../middleware/auth");
 
 const JWT_SECRET = process.env.JWT_SECRET || "dev_secret";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
@@ -381,6 +382,29 @@ router.post("/reset-password", async (req, res) => {
             }
         }
     );
+});
+
+// =====================
+// UPDATE PROFILE
+// =====================
+router.put("/perfil", requireAuth, (req, res) => {
+    const { nombre, telefono } = req.body;
+    const usuarioId = req.usuario.id;
+
+    if (!nombre) {
+        return res.status(400).json({ error: "El nombre es obligatorio" });
+    }
+
+    const sql = "UPDATE usuarios SET nombre = ?, telefono = ? WHERE id = ?";
+    db.query(sql, [nombre, telefono || null, usuarioId], (err, result) => {
+        if (err) {
+            console.log(err);
+            return res.status(500).json({ error: "Error al actualizar el perfil" });
+        }
+
+        // Return updated user data (just the updated fields for frontend sync)
+        res.json({ message: "Perfil actualizado correctamente", nombre, telefono });
+    });
 });
 
 module.exports = router;

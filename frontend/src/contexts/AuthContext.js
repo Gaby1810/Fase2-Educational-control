@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { DeviceEventEmitter } from 'react-native';
 import { saveToken, removeToken } from '../services/api';
 
 const USER_KEY = 'auth_user';
@@ -20,6 +21,14 @@ export function AuthProvider({ children }) {
       } catch {}
       setLoading(false);
     })();
+
+    const listener = DeviceEventEmitter.addListener('onTokenExpired', () => {
+      logout();
+    });
+
+    return () => {
+      listener.remove();
+    };
   }, []);
 
   const login = async (token, user) => {

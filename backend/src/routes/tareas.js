@@ -293,7 +293,7 @@ router.get('/clase/:claseId', auth, (req, res) => {
 // CREAR TAREA (docente) — con archivo opcional
 // POST /api/tareas/crear
 // =====================
-router.post('/crear', auth, requireRole('docente'), aceptarArchivo, (req, res) => {
+router.post('/crear', auth, requireRole('docente', 'administrador'), aceptarArchivo, (req, res) => {
 
     const { titulo, descripcion, instrucciones, fecha_entrega, clase_id } = req.body;
     const docenteId = req.usuario.id;
@@ -341,6 +341,90 @@ router.post('/crear', auth, requireRole('docente'), aceptarArchivo, (req, res) =
             );
         }
     );
+});
+
+// =====================
+// VER ENTREGAS DE UNA TAREA (solo docente)
+// GET /api/tareas/:tareaId/entregas
+// =====================
+router.get('/:tareaId/entregas', auth, requireRole('docente', 'administrador'), (req, res) => {
+    const { tareaId } = req.params;
+    const docenteId = req.usuario.id;
+
+    const validarSql = `
+        SELECT t.id
+        FROM tareas t
+        INNER JOIN clases c ON c.id = t.clase_id
+        WHERE t.id = ? AND c.docente_id = ?
+        LIMIT 1
+    `;
+
+    db.query(validarSql, [tareaId, docenteId], (err, rows) => {
+        if (err) {
+            console.log(err);
+            return res.status(500).json({ error: "Error al validar tarea" });
+        }
+        if (rows.length === 0) {
+            return res.status(403).json({ error: "No tienes permiso para ver estas entregas" });
+        }
+
+        const sql = `
+            SELECT
+                et.id AS entrega_id,
+                et.archivo,
+                et.fecha_entrega,
+                u.id AS estudiante_id,
+                u.nombre AS estudiante_nombre
+            FROM entrega_tareas et
+            INNER JOIN usuarios u ON u.id = et.estudiante_id
+            WHERE et.tarea_id = ?
+            ORDER BY et.fecha_entrega DESC
+        `;
+
+        db.query(sql, [tareaId], (err, entregas) => {
+            if (err) {
+                console.log(err);
+                return res.status(500).json({ error: "Error al obtener entregas" });
+            }
+            res.json(entregas);
+        });
+    });
+});
+
+// =====================
+// ELIMINAR TAREA
+// =====================
+router.delete('/:id', auth, requireRole('docente', 'administrador'), (req, res) => {
+    const { id } = req.params;
+    const docenteId = req.usuario.id;
+
+    const sqlVerify = `
+        SELECT t.id, t.archivo
+        FROM tareas t
+        INNER JOIN clases c ON c.id = t.clase_id
+        WHERE t.id = ? AND c.docente_id = ?
+    `;
+
+    db.query(sqlVerify, [id, docenteId], (err, rows) => {
+        if (err) return res.status(500).json({ error: "Error validando permiso" });
+        if (rows.length === 0) return res.status(403).json({ error: "No tienes permiso para eliminar esta tarea" });
+
+        const archivo = rows[0].archivo;
+
+        db.query("DELETE FROM tareas WHERE id = ?", [id], (err, result) => {
+            if (err) return res.status(500).json({ error: "Error al eliminar tarea" });
+
+            // Eliminar archivo físico si existe
+            if (archivo) {
+                const filePath = path.join(uploadsDir, archivo);
+                if (fs.existsSync(filePath)) {
+                    fs.unlinkSync(filePath);
+                }
+            }
+
+            res.json({ message: "Tarea eliminada" });
+        });
+    });
 });
 
 module.exports = router;

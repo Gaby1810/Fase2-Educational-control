@@ -120,13 +120,19 @@ router.get('/clase/:claseId', auth, (req, res) => {
 // REGISTRAR NOTA (solo docente)
 // POST /api/notas/guardar
 // =====================
-router.post('/guardar', auth, requireRole('docente'), (req, res) => {
+router.post('/guardar', auth, requireRole('docente', 'administrador'), (req, res) => {
 
     const { calificacion, evaluacion, clase_id, estudiante_id } = req.body;
 
     if (calificacion == null || !clase_id || !estudiante_id) {
         return res.status(400).json({
             error: "calificacion, clase_id y estudiante_id son obligatorios"
+        });
+    }
+
+    if (calificacion < 0 || calificacion > 100) {
+        return res.status(400).json({
+            error: "La calificación debe estar entre 0 y 100"
         });
     }
 

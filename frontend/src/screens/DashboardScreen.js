@@ -53,53 +53,32 @@ export default function DashboardScreen({ navigation }) {
   // CARDS SEGÚN EL ROL
   // ===============================
 
-  const cards = esDocente
-    ? [
-        {
-          title: "Mis clases",
-          desc: "Administra tus clases creadas.",
-          image: "https://cdn-icons-png.flaticon.com/512/3135/3135755.png",
-          icon: "book-open-page-variant",
-          route: "ClasesList"
-        },
-        {
-          title: "Asistencia",
-          desc: "Gestiona asistencia de estudiantes.",
-          image: "https://cdn-icons-png.flaticon.com/512/201/201818.png",
-          icon: "account-group",
-          route: "ClasesList"
-        },
-        {
-          title: "Tareas",
-          desc: "Publica tareas y actividades.",
-          image: "https://cdn-icons-png.flaticon.com/512/4341/4341139.png",
-          icon: "clipboard-text",
-          route: "ClasesList"
-        },
-        {
-          title: "Notas",
-          desc: "Administra calificaciones.",
-          image: "https://cdn-icons-png.flaticon.com/512/3135/3135789.png",
-          icon: "chart-bar",
-          route: "ClasesList"
-        }
-      ]
-    : [
-        {
-          title: "Mis clases",
-          desc: "Clases en las que estás inscrito.",
-          image: "https://cdn-icons-png.flaticon.com/512/3135/3135755.png",
-          icon: "book-open-page-variant",
-          route: "ClasesList"
-        },
-        {
-          title: "Mi perfil",
-          desc: "Visualiza tu información.",
-          image: "https://cdn-icons-png.flaticon.com/512/201/201818.png",
-          icon: "account-circle",
-          route: "Perfil"
-        }
-      ];
+  const cards = [
+    {
+      title: "Mis clases",
+      desc: esDocente ? "Administra tus clases creadas." : "Mira las clases en las que estás inscrito.",
+      image: "https://cdn-icons-png.flaticon.com/512/3135/3135755.png",
+      icon: "book-open-page-variant",
+      route: "ClasesList"
+    },
+    {
+      title: "Mi perfil",
+      desc: "Visualiza tu información y configuración.",
+      image: "https://cdn-icons-png.flaticon.com/512/201/201818.png",
+      icon: "account-circle",
+      route: "Perfil"
+    }
+  ];
+
+  if (!esDocente) {
+    cards.splice(1, 0, {
+      title: "Mis notas",
+      desc: "Consulta tu promedio y calificaciones.",
+      image: "https://cdn-icons-png.flaticon.com/512/2436/2436636.png",
+      icon: "star-circle-outline",
+      route: "Notas"
+    });
+  }
 
   return (
 

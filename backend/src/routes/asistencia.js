@@ -95,13 +95,14 @@ router.get('/reporte-anual', auth, requireRole('estudiante'), (req, res) => {
 
 // =====================
 // OBTENER ASISTENCIA DE UNA CLASE
-//  - Docente: ve todos los registros con nombre del estudiante.
+//  - Docente/Admin: ve todos los registros con nombre del estudiante, filtrable por fecha.
 //  - Estudiante: ve solo sus propios registros.
-// GET /api/asistencia/clase/:claseId
+// GET /api/asistencia/clase/:claseId?fecha=YYYY-MM-DD
 // =====================
 router.get('/clase/:claseId', auth, (req, res) => {
 
     const { claseId } = req.params;
+    const { fecha } = req.query;
     const { id, rol } = req.usuario;
 
     let sql;
@@ -116,14 +117,25 @@ router.get('/clase/:claseId', auth, (req, res) => {
         `;
         params = [claseId, id];
     } else {
-        sql = `
-            SELECT a.*, u.nombre AS estudiante
-            FROM asistencia a
-            LEFT JOIN usuarios u ON u.id = a.estudiante_id
-            WHERE a.clase_id = ?
-            ORDER BY a.fecha DESC, a.id DESC
-        `;
-        params = [claseId];
+        if (fecha) {
+            sql = `
+                SELECT a.*, u.nombre AS estudiante
+                FROM asistencia a
+                LEFT JOIN usuarios u ON u.id = a.estudiante_id
+                WHERE a.clase_id = ? AND a.fecha = ?
+                ORDER BY a.id DESC
+            `;
+            params = [claseId, fecha];
+        } else {
+            sql = `
+                SELECT a.*, u.nombre AS estudiante
+                FROM asistencia a
+                LEFT JOIN usuarios u ON u.id = a.estudiante_id
+                WHERE a.clase_id = ?
+                ORDER BY a.fecha DESC, a.id DESC
+            `;
+            params = [claseId];
+        }
     }
 
     db.query(sql, params, (err, rows) => {
@@ -137,18 +149,51 @@ router.get('/clase/:claseId', auth, (req, res) => {
     });
 });
 
+// =====================
+// OBTENER HISTORIAL DE UN ESTUDIANTE EN UNA CLASE
+// GET /api/asistencia/clase/:claseId/estudiante/:estudianteId
+// =====================
+router.get('/clase/:claseId/estudiante/:estudianteId', auth, (req, res) => {
+    const { claseId, estudianteId } = req.params;
+
+    const sql = `
+        SELECT id, fecha, estado 
+        FROM asistencia 
+        WHERE clase_id = ? AND estudiante_id = ?
+        ORDER BY fecha DESC
+    `;
+
+    db.query(sql, [claseId, estudianteId], (err, rows) => {
+        if (err) {
+            console.log("Error SQL historial estudiante:", err);
+            return res.status(500).json({ error: "Error al obtener historial" });
+        }
+        res.json(rows);
+    });
+});
+
 
 // =====================
-// REGISTRAR ASISTENCIA (solo docente)
+// REGISTRAR ASISTENCIA (solo docente/admin)
 // POST /api/asistencia/guardar
 // =====================
-router.post('/guardar', auth, requireRole('docente'), (req, res) => {
+router.post('/guardar', auth, requireRole('docente', 'administrador'), (req, res) => {
 
     const { clase_id, fecha, datos } = req.body;
 
     if (!clase_id || !fecha || !datos || typeof datos !== 'object') {
         return res.status(400).json({
             error: "clase_id, fecha y datos son obligatorios"
+        });
+    }
+
+    // Validar que la fecha no sea en el futuro
+    const hoy = new Date();
+    // Convert to YYYY-MM-DD for comparison
+    const hoyStr = hoy.toISOString().split('T')[0];
+    if (fecha > hoyStr) {
+        return res.status(400).json({
+            error: "No se puede registrar asistencia en fechas futuras"
         });
     }
 
@@ -165,7 +210,7 @@ router.post('/guardar', auth, requireRole('docente'), (req, res) => {
         estudiante_id
     ]);
 
-    const sql = "INSERT INTO asistencia (fecha, estado, clase_id, estudiante_id) VALUES ?";
+    const sql = "INSERT INTO asistencia (fecha, estado, clase_id, estudiante_id) VALUES ? ON DUPLICATE KEY UPDATE estado = VALUES(estado)";
 
     db.query(sql, [values], (err, result) => {
 

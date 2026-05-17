@@ -8,7 +8,9 @@ import {
   SafeAreaView,
   Alert,
   ActivityIndicator,
-  Image
+  Image,
+  RefreshControl,
+  Modal
 } from 'react-native';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
@@ -17,20 +19,32 @@ import { useAuth } from '../contexts/AuthContext';
 
 export default function AsistenciaScreen({ route, navigation }) {
 
+  const [fechaActual, setFechaActual] = useState(new Date());
+
   const { claseId, nombreClase } = route?.params || {};
   const { usuario } = useAuth();
+  
   const esDocente = usuario?.rol === 'docente';
+  const esAdmin = usuario?.rol === 'administrador';
+  const esDocenteOAdmin = esDocente || esAdmin;
 
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Estudiante: su historial de asistencia
   const [historial, setHistorial] = useState([]);
 
-  // Docente: estudiantes inscritos + estado marcado por id
+  // Docente/Admin: estudiantes inscritos + estado marcado por id
   const [estudiantes, setEstudiantes] = useState([]);
   const [asistencia, setAsistencia] = useState({});
   const [guardando, setGuardando] = useState(false);
   const [mostrarExito, setMostrarExito] = useState(false);
+
+  // Modal de Historial
+  const [modalVisible, setModalVisible] = useState(false);
+  const [estudianteSeleccionado, setEstudianteSeleccionado] = useState(null);
+  const [historialEstudiante, setHistorialEstudiante] = useState([]);
+  const [loadingHistorial, setLoadingHistorial] = useState(false);
 
   // ===================================================
   // CARGAR DATOS
@@ -41,15 +55,33 @@ export default function AsistenciaScreen({ route, navigation }) {
       return;
     }
     cargar();
-  }, [claseId]);
+  }, [claseId, fechaActual]);
 
   const cargar = async () => {
     try {
       setLoading(true);
-      if (esDocente) {
+      if (esDocenteOAdmin) {
+        // Cargar alumnos inscritos
         const lista = await get(`/clases/${claseId}/estudiantes`);
         setEstudiantes(Array.isArray(lista) ? lista : []);
+        
+        // Cargar asistencia previa para esta fecha específica
+        const dateStr = fechaActual.toISOString().split('T')[0];
+        const hist = await get(`/asistencia/clase/${claseId}?fecha=${dateStr}`);
+        
+        // Mapear historial al estado local
+        const asist = {};
+        if (Array.isArray(hist)) {
+          hist.forEach(r => {
+            if(r.estado === 'presente') asist[r.estudiante_id] = 'P';
+            else if(r.estado === 'ausente') asist[r.estudiante_id] = 'A';
+            else if(r.estado === 'tarde') asist[r.estudiante_id] = 'T';
+          });
+        }
+        setAsistencia(asist);
+
       } else {
+        // Si es estudiante
         const hist = await get(`/asistencia/clase/${claseId}`);
         setHistorial(Array.isArray(hist) ? hist : []);
       }
@@ -57,6 +89,40 @@ export default function AsistenciaScreen({ route, navigation }) {
       console.log('Error asistencia:', e.message);
     } finally {
       setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    cargar();
+  };
+
+  const esHoy = () => {
+    const hoy = new Date();
+    return fechaActual.getDate() === hoy.getDate() && 
+           fechaActual.getMonth() === hoy.getMonth() && 
+           fechaActual.getFullYear() === hoy.getFullYear();
+  };
+
+  const cambiarFecha = (dias) => {
+    if (dias > 0 && esHoy()) return; // Prevenir fechas futuras
+    const nuevaFecha = new Date(fechaActual);
+    nuevaFecha.setDate(nuevaFecha.getDate() + dias);
+    setFechaActual(nuevaFecha);
+  };
+
+  const cargarHistorial = async (estudiante) => {
+    setEstudianteSeleccionado(estudiante);
+    setModalVisible(true);
+    setLoadingHistorial(true);
+    try {
+      const data = await get(`/asistencia/clase/${claseId}/estudiante/${estudiante.id}`);
+      setHistorialEstudiante(Array.isArray(data) ? data : []);
+    } catch (e) {
+      Alert.alert('Error', 'No se pudo cargar el historial');
+    } finally {
+      setLoadingHistorial(false);
     }
   };
 
@@ -64,6 +130,7 @@ export default function AsistenciaScreen({ route, navigation }) {
   // DOCENTE: marcar y guardar
   // ===================================================
   const marcar = (estudianteId, estado) => {
+    if (!esDocente) return; // Solo docente edita
     setAsistencia((prev) => ({ ...prev, [estudianteId]: estado }));
   };
 
@@ -76,6 +143,7 @@ export default function AsistenciaScreen({ route, navigation }) {
   );
 
   const handleGuardar = async () => {
+    if (!esDocente) return;
     if (estudiantes.length === 0) {
       Alert.alert('Sin estudiantes', 'No hay estudiantes inscritos en esta clase.');
       return;
@@ -87,17 +155,17 @@ export default function AsistenciaScreen({ route, navigation }) {
 
     try {
       setGuardando(true);
+      const dateStr = fechaActual.toISOString().split('T')[0];
 
       await post('/asistencia/guardar', {
         clase_id: claseId,
-        fecha: new Date().toISOString().split('T')[0],
+        fecha: dateStr,
         datos: asistencia
       });
 
       setMostrarExito(true);
       setTimeout(() => {
         setMostrarExito(false);
-        navigation.goBack();
       }, 2200);
 
     } catch (e) {
@@ -121,7 +189,7 @@ export default function AsistenciaScreen({ route, navigation }) {
     { P: 0, A: 0, T: 0 }
   );
 
-  const fechaHoy = new Date()
+  const fechaFormat = fechaActual
     .toLocaleDateString('es-ES', {
       weekday: 'long',
       year: 'numeric',
@@ -155,7 +223,16 @@ export default function AsistenciaScreen({ route, navigation }) {
       </View>
 
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[Colors.primary]}
+          />
+        }
+      >
 
         {/* TOAST DE ÉXITO (docente) */}
         {mostrarExito && (
@@ -178,40 +255,37 @@ export default function AsistenciaScreen({ route, navigation }) {
           </View>
         )}
 
-
-        {esDocente
-          ? (
-            <Text style={[styles.dateLabel, { color: Colors.primary }]}>
-              {fechaHoy}
+        {esDocenteOAdmin ? (
+          <View style={{flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 15, gap: 10}}>
+            <MaterialCommunityIcons name="calendar-today" size={20} color={Colors.primary} />
+            <Text style={[styles.dateLabel, { color: Colors.primary, marginBottom: 0 }]}>
+              {fechaFormat} (Hoy)
             </Text>
-          )
-          : (
-            <Text style={[styles.dateLabel, { color: Colors.primary }]}>
-              {(nombreClase || 'CLASE').toUpperCase()}
-            </Text>
-          )
-        }
-
+          </View>
+        ) : (
+          <Text style={[styles.dateLabel, { color: Colors.primary }]}>
+            {(nombreClase || 'CLASE').toUpperCase()}
+          </Text>
+        )}
 
         {/* RESUMEN DE TOTALES */}
         <View style={styles.summaryContainer}>
           <SummaryBox
             label="PRESENTE"
-            value={esDocente ? totales.P : resumenEstudiante.P}
+            value={esDocenteOAdmin ? totales.P : resumenEstudiante.P}
             color={Colors.primary}
           />
           <SummaryBox
             label="AUSENTE"
-            value={esDocente ? totales.A : resumenEstudiante.A}
+            value={esDocenteOAdmin ? totales.A : resumenEstudiante.A}
             color={Colors.error}
           />
           <SummaryBox
             label="TARDANZA"
-            value={esDocente ? totales.T : resumenEstudiante.T}
+            value={esDocenteOAdmin ? totales.T : resumenEstudiante.T}
             color={Colors.tertiary}
           />
         </View>
-
 
         {/* LOADING */}
         {loading && (
@@ -220,11 +294,10 @@ export default function AsistenciaScreen({ route, navigation }) {
           </View>
         )}
 
-
         {/* ===================== */}
-        {/* VISTA: DOCENTE        */}
+        {/* VISTA: DOCENTE / ADMIN*/}
         {/* ===================== */}
-        {!loading && esDocente && (
+        {!loading && esDocenteOAdmin && (
           <>
             <View style={styles.listHeader}>
               <Text
@@ -300,11 +373,14 @@ export default function AsistenciaScreen({ route, navigation }) {
                     activeColor={Colors.tertiary}
                     onPress={() => marcar(est.id, 'T')}
                   />
+                  <TouchableOpacity style={styles.historyBtn} onPress={() => cargarHistorial(est)}>
+                    <MaterialCommunityIcons name="history" size={22} color={Colors.onSurfaceVariant} />
+                  </TouchableOpacity>
                 </View>
               </View>
             ))}
 
-            {estudiantes.length > 0 && (
+            {esDocente && estudiantes.length > 0 && (
               <TouchableOpacity
                 style={[
                   styles.btnSave,
@@ -335,7 +411,7 @@ export default function AsistenciaScreen({ route, navigation }) {
         {/* ===================== */}
         {/* VISTA: ESTUDIANTE     */}
         {/* ===================== */}
-        {!loading && !esDocente && (
+        {!loading && !esDocenteOAdmin && (
           <>
             <View style={styles.listHeader}>
               <Text
@@ -414,6 +490,46 @@ export default function AsistenciaScreen({ route, navigation }) {
             ))}
           </>
         )}
+
+        {/* MODAL DE HISTORIAL POR ESTUDIANTE */}
+        <Modal visible={modalVisible} transparent={true} animationType="slide">
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, { backgroundColor: Colors.surfaceContainerLow }]}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: Colors.onSurface }]}>Historial de Asistencia</Text>
+                <TouchableOpacity onPress={() => setModalVisible(false)}>
+                  <Ionicons name="close" size={24} color={Colors.onSurface} />
+                </TouchableOpacity>
+              </View>
+              <Text style={[styles.modalSubtitle, { color: Colors.primary }]}>
+                {estudianteSeleccionado?.nombre}
+              </Text>
+              
+              {loadingHistorial ? (
+                <ActivityIndicator size="large" color={Colors.primary} style={{ marginVertical: 30 }} />
+              ) : historialEstudiante.length === 0 ? (
+                <Text style={{ textAlign: 'center', marginTop: 20, color: Colors.onSurfaceVariant }}>
+                  Sin registros de asistencia aún.
+                </Text>
+              ) : (
+                <ScrollView style={{ maxHeight: 300, marginTop: 10 }}>
+                  {historialEstudiante.map((reg) => (
+                    <View key={reg.id} style={[styles.historyRow, { borderBottomColor: Colors.outlineVariant }]}>
+                      <Text style={{ color: Colors.onSurface }}>
+                        {new Date(reg.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </Text>
+                      <View style={[styles.historyBadge, { backgroundColor: reg.estado === 'presente' ? Colors.primary + '22' : reg.estado === 'ausente' ? Colors.error + '22' : Colors.tertiary + '22' }]}>
+                        <Text style={[styles.historyBadgeText, { color: reg.estado === 'presente' ? Colors.primary : reg.estado === 'ausente' ? Colors.error : Colors.tertiary }]}>
+                          {reg.estado.toUpperCase()}
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
+                </ScrollView>
+              )}
+            </View>
+          </View>
+        </Modal>
 
       </ScrollView>
     </SafeAreaView>

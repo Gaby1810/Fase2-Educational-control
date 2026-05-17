@@ -14,7 +14,8 @@ import {
   TextInput,
   Alert,
  Image,
-  Dimensions
+  Dimensions,
+  RefreshControl
 } from 'react-native';
 
 import * as DocumentPicker
@@ -29,7 +30,8 @@ from '../constants/colors';
 
 import {
   get,
-  post
+  post,
+  del
 }
 from '../services/api';
 
@@ -61,6 +63,13 @@ MaterialClaseScreen({
   const [materiales, setMateriales] = useState([]);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [archivo, setArchivo] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await cargarMateriales();
+    setRefreshing(false);
+  };
 
   const [form, setForm] = useState({
     titulo: '',
@@ -230,6 +239,26 @@ MaterialClaseScreen({
     }
   };
 
+  const handleDelete = (id) => {
+    Alert.alert(
+      "Eliminar Material",
+      "¿Estás seguro de que deseas eliminar este material?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        { text: "Eliminar", style: "destructive", onPress: async () => {
+           try {
+             await del(`/materiales/${id}`);
+             Alert.alert("Éxito", "Material eliminado");
+             cargarMateriales();
+           } catch (error) {
+             Alert.alert("Error", error.message);
+           }
+        }}
+      ]
+    );
+  };
+
+
 
   return (
 
@@ -270,9 +299,14 @@ MaterialClaseScreen({
 
 
       <ScrollView
-        contentContainerStyle={{
-          padding: 20
-        }}
+        contentContainerStyle={{ padding: 20 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[Colors.primary]}
+          />
+        }
       >
 
         {/* TITULO */}
@@ -496,11 +530,17 @@ MaterialClaseScreen({
               </View>
 
 
-              <Ionicons
-                name="chevron-forward"
-                size={24}
-                color="#999"
-              />
+              {esDocente ? (
+                <TouchableOpacity onPress={() => handleDelete(item.id)} style={{ padding: 10 }}>
+                  <Ionicons name="trash-outline" size={24} color={Colors.error} />
+                </TouchableOpacity>
+              ) : (
+                <Ionicons
+                  name="chevron-forward"
+                  size={24}
+                  color="#999"
+                />
+              )}
 
             </TouchableOpacity>
           ))

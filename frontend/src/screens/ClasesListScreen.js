@@ -13,7 +13,8 @@ import {
   Dimensions,
   Alert,
   Modal,
-  ActivityIndicator
+  ActivityIndicator,
+  RefreshControl
 } from 'react-native';
 
 import { Ionicons } from '@expo/vector-icons';
@@ -59,6 +60,13 @@ export default function ClasesListScreen({ navigation }) {
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [clases, setClases] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await cargarClases();
+    setRefreshing(false);
+  };
 
   const [form, setForm] = useState({
     nombre: '',
@@ -318,8 +326,13 @@ export default function ClasesListScreen({ navigation }) {
 
 
       <ScrollView
-        contentContainerStyle={
-          styles.scrollContent
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[Colors.primary]}
+          />
         }
       >
 

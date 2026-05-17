@@ -233,7 +233,7 @@ router.get('/reportes', (req, res) => {
     `;
 
     // Promedio sistema (notas)
-    const sqlPromedio = `SELECT AVG(nota) AS promedio FROM notas`;
+    const sqlPromedio = `SELECT AVG(calificacion) AS promedio FROM notas`;
 
     // Total alumnos activos
     const sqlAlumnos = `SELECT COUNT(*) AS total FROM usuarios WHERE rol = 'estudiante'`;

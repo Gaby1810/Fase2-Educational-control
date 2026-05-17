@@ -21,8 +21,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { get, put, del } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
-const NAVY = '#0B2C74';
-const LIGHT_BG = '#F5F6FA';
+import { Colors } from '../constants/colors';
+
+// const NAVY = '#0B2C74';
+// const LIGHT_BG = '#F5F6FA';
 
 const ROL_COLOR = {
   docente:       { bg: '#4F46E5', text: '#fff' },
@@ -136,26 +138,26 @@ export default function AdminUsuariosScreen({ navigation, route }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: Colors.background }]}>
 
       {/* HEADER */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: Colors.surfaceContainerHighest }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={26} color="#fff" />
+          <Ionicons name="chevron-back" size={26} color={Colors.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Directorio de usuarios</Text>
+        <Text style={[styles.headerTitle, { color: Colors.onSurface }]}>Directorio de usuarios</Text>
         <TouchableOpacity onPress={cargar}>
-          <Ionicons name="refresh" size={22} color="#fff" />
+          <Ionicons name="refresh" size={22} color={Colors.primary} />
         </TouchableOpacity>
       </View>
 
       {/* BUSQUEDA */}
-      <View style={styles.searchWrap}>
-        <Ionicons name="search-outline" size={18} color="#aaa" style={{ marginRight: 8 }} />
+      <View style={[styles.searchWrap, { backgroundColor: Colors.surfaceContainerLow }]}>
+        <Ionicons name="search-outline" size={18} color={Colors.outline} style={{ marginRight: 8 }} />
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, { color: Colors.onSurface }]}
           placeholder="Buscar por nombre o email..."
-          placeholderTextColor="#bbb"
+          placeholderTextColor={Colors.onSurfaceVariant}
           value={busqueda}
           onChangeText={setBusqueda}
           onSubmitEditing={cargar}
@@ -163,7 +165,7 @@ export default function AdminUsuariosScreen({ navigation, route }) {
         />
         {busqueda.length > 0 && (
           <TouchableOpacity onPress={() => setBusqueda('')}>
-            <Ionicons name="close-circle" size={18} color="#ccc" />
+            <Ionicons name="close-circle" size={18} color={Colors.outline} />
           </TouchableOpacity>
         )}
       </View>
@@ -178,10 +180,10 @@ export default function AdminUsuariosScreen({ navigation, route }) {
         {FILTROS.map(f => (
           <TouchableOpacity
             key={f}
-            style={[styles.filtroBtn, filtro === f && styles.filtroBtnActive]}
+            style={[styles.filtroBtn, { backgroundColor: filtro === f ? Colors.primary : Colors.surfaceContainerHighest }]}
             onPress={() => setFiltro(f)}
           >
-            <Text style={[styles.filtroTxt, filtro === f && styles.filtroTxtActive]}>
+            <Text style={[styles.filtroTxt, { color: filtro === f ? Colors.onPrimary : Colors.onSurfaceVariant }]}>
               {f.charAt(0).toUpperCase() + f.slice(1)}
             </Text>
           </TouchableOpacity>
@@ -189,13 +191,13 @@ export default function AdminUsuariosScreen({ navigation, route }) {
       </ScrollView>
 
       {/* CONTEO */}
-      <Text style={styles.conteo}>
+      <Text style={[styles.conteo, { color: Colors.onSurfaceVariant }]}>
         DIRECTORIO DE USUARIOS — {usuarios.length} TOTAL
       </Text>
 
       {/* LISTA */}
       {loading ? (
-        <ActivityIndicator size="large" color={NAVY} style={{ marginTop: 40 }} />
+        <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: 40 }} />
       ) : (
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -204,14 +206,14 @@ export default function AdminUsuariosScreen({ navigation, route }) {
         >
           {usuarios.length === 0 ? (
             <View style={styles.empty}>
-              <Ionicons name="people-outline" size={50} color="#ccc" />
-              <Text style={styles.emptyTxt}>No se encontraron usuarios</Text>
+              <Ionicons name="people-outline" size={50} color={Colors.outline} />
+              <Text style={[styles.emptyTxt, { color: Colors.onSurfaceVariant }]}>No se encontraron usuarios</Text>
             </View>
           ) : (
             usuarios.map(u => {
               const rc = ROL_COLOR[u.rol] ?? { bg: '#888', text: '#fff' };
               return (
-                <View key={u.id} style={styles.userCard}>
+                <View key={u.id} style={[styles.userCard, { backgroundColor: Colors.surfaceContainerLow }]}>
 
                   {/* Avatar + info */}
                   <View style={styles.userTop}>
@@ -219,34 +221,34 @@ export default function AdminUsuariosScreen({ navigation, route }) {
                       <Text style={styles.avatarTxt}>{iniciales(u.nombre)}</Text>
                     </View>
                     <View style={styles.userInfo}>
-                      <Text style={styles.userName}>{u.nombre}</Text>
-                      <Text style={styles.userEmail}>{u.correo}</Text>
+                      <Text style={[styles.userName, { color: Colors.onSurface }]}>{u.nombre}</Text>
+                      <Text style={[styles.userEmail, { color: Colors.onSurfaceVariant }]}>{u.correo}</Text>
                       <View style={styles.badgeRow}>
                         <View style={[styles.badge, { backgroundColor: rc.bg }]}>
                           <Text style={[styles.badgeTxt, { color: rc.text }]}>
                             {u.rol}
                           </Text>
                         </View>
-                        <View style={[styles.badge, { backgroundColor: '#E6FAF0' }]}>
-                          <Text style={[styles.badgeTxt, { color: '#1B7A3E' }]}>Activo</Text>
+                        <View style={[styles.badge, { backgroundColor: Colors.secondary + '22' }]}>
+                          <Text style={[styles.badgeTxt, { color: Colors.secondary }]}>Activo</Text>
                         </View>
                       </View>
                     </View>
-                    <Ionicons name="ellipsis-vertical" size={18} color="#bbb" />
+                    <Ionicons name="ellipsis-vertical" size={18} color={Colors.outline} />
                   </View>
 
                   {/* Acciones */}
-                  <View style={styles.actionsRow}>
-                    <TouchableOpacity style={styles.actionBtn} onPress={() => abrirEditar(u)}>
-                      <Ionicons name="pencil-outline" size={15} color="#555" />
-                      <Text style={styles.actionTxt}>Editar</Text>
+                  <View style={[styles.actionsRow, { borderColor: Colors.outlineVariant }]}>
+                    <TouchableOpacity style={[styles.actionBtn, { borderColor: Colors.outline }]} onPress={() => abrirEditar(u)}>
+                      <Ionicons name="pencil-outline" size={15} color={Colors.onSurfaceVariant} />
+                      <Text style={[styles.actionTxt, { color: Colors.onSurfaceVariant }]}>Editar</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      style={[styles.actionBtn, styles.actionBtnDanger]}
+                      style={[styles.actionBtn, { borderColor: Colors.error + '44' }]}
                       onPress={() => confirmarEliminar(u)}
                     >
-                      <Ionicons name="trash-outline" size={15} color="#E53935" />
-                      <Text style={[styles.actionTxt, { color: '#E53935' }]}>Eliminar</Text>
+                      <Ionicons name="trash-outline" size={15} color={Colors.error} />
+                      <Text style={[styles.actionTxt, { color: Colors.error }]}>Eliminar</Text>
                     </TouchableOpacity>
                   </View>
 
@@ -265,36 +267,45 @@ export default function AdminUsuariosScreen({ navigation, route }) {
         onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>Editar usuario</Text>
+          <View style={[styles.modalBox, { backgroundColor: Colors.surfaceContainerHighest }]}>
+            <Text style={[styles.modalTitle, { color: Colors.onSurface }]}>Editar usuario</Text>
 
-            <Text style={styles.fieldLabel}>Nombre</Text>
+            <Text style={[styles.fieldLabel, { color: Colors.onSurfaceVariant }]}>Nombre</Text>
             <TextInput
-              style={styles.fieldInput}
+              style={[styles.fieldInput, { borderColor: Colors.outline, color: Colors.onSurface }]}
               value={editNombre}
               onChangeText={setEditNombre}
               placeholder="Nombre completo"
+              placeholderTextColor={Colors.onSurfaceVariant}
             />
 
-            <Text style={styles.fieldLabel}>Correo</Text>
+            <Text style={[styles.fieldLabel, { color: Colors.onSurfaceVariant }]}>Correo</Text>
             <TextInput
-              style={styles.fieldInput}
+              style={[styles.fieldInput, { borderColor: Colors.outline, color: Colors.onSurface }]}
               value={editCorreo}
               onChangeText={setEditCorreo}
               placeholder="correo@ejemplo.com"
               keyboardType="email-address"
               autoCapitalize="none"
+              placeholderTextColor={Colors.onSurfaceVariant}
             />
 
-            <Text style={styles.fieldLabel}>Rol</Text>
+            <Text style={[styles.fieldLabel, { color: Colors.onSurfaceVariant }]}>Rol</Text>
             <View style={styles.rolSelector}>
               {['docente', 'estudiante', 'administrador'].map(r => (
                 <TouchableOpacity
                   key={r}
-                  style={[styles.rolBtn, editRol === r && styles.rolBtnActive]}
+                  style={[
+                    styles.rolBtn,
+                    { borderColor: Colors.outline },
+                    editRol === r && { backgroundColor: Colors.primary, borderColor: Colors.primary }
+                  ]}
                   onPress={() => setEditRol(r)}
                 >
-                  <Text style={[styles.rolBtnTxt, editRol === r && { color: '#fff' }]}>
+                  <Text style={[
+                    styles.rolBtnTxt,
+                    { color: editRol === r ? Colors.onPrimary : Colors.onSurfaceVariant }
+                  ]}>
                     {r.charAt(0).toUpperCase() + r.slice(1)}
                   </Text>
                 </TouchableOpacity>
@@ -303,19 +314,19 @@ export default function AdminUsuariosScreen({ navigation, route }) {
 
             <View style={styles.modalActions}>
               <TouchableOpacity
-                style={styles.btnCancelar}
+                style={[styles.btnCancelar, { backgroundColor: Colors.surfaceContainerLow }]}
                 onPress={() => setModalVisible(false)}
               >
-                <Text style={styles.btnCancelarTxt}>Cancelar</Text>
+                <Text style={[styles.btnCancelarTxt, { color: Colors.onSurface }]}>Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.btnGuardar}
+                style={[styles.btnGuardar, { backgroundColor: Colors.primary }]}
                 onPress={guardarEdicion}
                 disabled={guardando}
               >
                 {guardando
-                  ? <ActivityIndicator color="#fff" size="small" />
-                  : <Text style={styles.btnGuardarTxt}>Guardar</Text>
+                  ? <ActivityIndicator color={Colors.onPrimary} size="small" />
+                  : <Text style={[styles.btnGuardarTxt, { color: Colors.onPrimary }]}>Guardar</Text>
                 }
               </TouchableOpacity>
             </View>
@@ -324,7 +335,7 @@ export default function AdminUsuariosScreen({ navigation, route }) {
       </Modal>
 
       {/* BOTTOM NAV */}
-      <View style={styles.bottomNav}>
+      <View style={[styles.bottomNav, { backgroundColor: Colors.surfaceContainerLowest, borderColor: Colors.outlineVariant }]}>
         <NavItem icon="home-outline"      label="Inicio"   onPress={() => navigation.navigate('AdminDashboard')} />
         <NavItem icon="book-outline"      label="Clases"   onPress={() => navigation.navigate('AdminClases')} />
         <NavItem icon="people"            label="Usuarios" active />
@@ -338,34 +349,32 @@ export default function AdminUsuariosScreen({ navigation, route }) {
 function NavItem({ icon, label, active, onPress }) {
   return (
     <TouchableOpacity style={styles.navItem} onPress={onPress}>
-      <Ionicons name={icon} size={24} color={active ? NAVY : '#888'} />
-      <Text style={[styles.navLabel, active && { color: NAVY }]}>{label}</Text>
+      <Ionicons name={icon} size={24} color={active ? Colors.primary : Colors.outline} />
+      <Text style={[styles.navLabel, { color: Colors.outline }, active && { color: Colors.primary }]}>{label}</Text>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  container:  { flex: 1, backgroundColor: LIGHT_BG },
+  container:  { flex: 1 },
   header: {
-    height: 60, backgroundColor: NAVY,
+    height: 60,
     flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between', paddingHorizontal: 16,
   },
-  headerTitle: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  headerTitle: { fontSize: 16, fontWeight: '700' },
 
   searchWrap: {
     flexDirection: 'row', alignItems: 'center',
-    margin: 14, backgroundColor: '#fff',
+    margin: 14,
     borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10,
     elevation: 2,
   },
-  searchInput: { flex: 1, fontSize: 14, color: '#222' },
+  searchInput: { flex: 1, fontSize: 14 },
 
   filtrosScroll:  { maxHeight: 44, marginBottom: 2 },
-  filtroBtn:      { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#eee' },
-  filtroBtnActive:{ backgroundColor: NAVY },
-  filtroTxt:      { fontSize: 13, color: '#555' },
-  filtroTxtActive:{ color: '#fff', fontWeight: '600' },
+  filtroBtn:      { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
+  filtroTxt:      { fontSize: 13, fontWeight: '600' },
 
   conteo: { fontSize: 11, color: '#999', fontWeight: '600', paddingHorizontal: 16, marginVertical: 8 },
 
@@ -416,17 +425,17 @@ const styles = StyleSheet.create({
   },
   rolSelector: { flexDirection: 'row', gap: 8, marginTop: 8, flexWrap: 'wrap' },
   rolBtn:      { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#ddd' },
-  rolBtnActive:{ backgroundColor: NAVY, borderColor: NAVY },
-  rolBtnTxt:   { fontSize: 13, color: '#555' },
+  rolBtnActive:{ backgroundColor: Colors.primary, borderColor: Colors.primary },
+  rolBtnTxt:   { fontSize: 13 },
   modalActions: { flexDirection: 'row', gap: 10, marginTop: 20 },
   btnCancelar: {
     flex: 1, paddingVertical: 12, borderRadius: 12,
-    backgroundColor: '#f5f5f5', alignItems: 'center',
+    alignItems: 'center',
   },
-  btnCancelarTxt: { color: '#555', fontWeight: '600' },
+  btnCancelarTxt: { fontWeight: '600' },
   btnGuardar: {
     flex: 1, paddingVertical: 12, borderRadius: 12,
-    backgroundColor: NAVY, alignItems: 'center',
+    backgroundColor: Colors.primary, alignItems: 'center',
   },
   btnGuardarTxt: { color: '#fff', fontWeight: '700' },
 

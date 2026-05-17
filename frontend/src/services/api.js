@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { DeviceEventEmitter } from 'react-native';
 import API_BASE_URL from '../constants/api';
 
 const TOKEN_KEY = 'auth_token';
@@ -57,6 +58,9 @@ const request = async (endpoint, options = {}) => {
     }
 
     if (!response.ok) {
+      if (response.status === 401) {
+        DeviceEventEmitter.emit('onTokenExpired');
+      }
       throw new Error(data.error || "Error en la solicitud");
     }
 

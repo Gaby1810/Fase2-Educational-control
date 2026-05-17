@@ -10,7 +10,8 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
-  Linking
+  Linking,
+  RefreshControl
 } from 'react-native';
 
 import {
@@ -21,7 +22,7 @@ import {
 import * as DocumentPicker from 'expo-document-picker';
 
 import { Colors } from '../constants/colors';
-import { get, post } from '../services/api';
+import { get, post, del } from '../services/api';
 import API_BASE_URL from '../constants/api';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -45,6 +46,13 @@ export default function TareasScreen({
   const [loading, setLoading] = useState(true);
   const [materiaSeleccionada, setMateriaSeleccionada] = useState(claseId ? String(claseId) : 'todas');
   const [estadoSeleccionado, setEstadoSeleccionado] = useState('todas');
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await obtenerTareas();
+    setRefreshing(false);
+  };
 
   const { usuario } = useAuth();
   const esDocente = usuario?.rol === 'docente';
@@ -178,6 +186,25 @@ export default function TareasScreen({
     }
   };
 
+  const handleEliminar = (id) => {
+    Alert.alert(
+      "Eliminar Tarea",
+      "¿Estás seguro de que deseas eliminar esta tarea?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        { text: "Eliminar", style: "destructive", onPress: async () => {
+           try {
+             await del(`/tareas/${id}`);
+             Alert.alert("Éxito", "Tarea eliminada");
+             obtenerTareas();
+           } catch (error) {
+             Alert.alert("Error", error.message);
+           }
+        }}
+      ]
+    );
+  };
+
   const abrirArchivoTarea = async (archivo) => {
     if (!archivo) return;
     const baseUrl = API_BASE_URL.replace('/api', '');
@@ -241,7 +268,17 @@ export default function TareasScreen({
         )}
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[Colors.primary]}
+          />
+        }
+      >
 
         {vistaGlobalEstudiante && (
           <>
@@ -353,6 +390,12 @@ export default function TareasScreen({
               <View style={[styles.estadoBadge, { backgroundColor: colorEstado(item) }]}>
                 <Text style={styles.estadoText}>{etiquetaTiempo(item)}</Text>
               </View>
+
+              {esDocente && (
+                <TouchableOpacity onPress={() => handleEliminar(item.id)} style={{ marginLeft: 10, padding: 5 }}>
+                  <Ionicons name="trash-outline" size={22} color={Colors.error} />
+                </TouchableOpacity>
+              )}
             </View>
 
             {!!item.instrucciones && (
@@ -410,6 +453,15 @@ export default function TareasScreen({
                 >
                   <Text style={[styles.completeBtnText, { color: Colors.secondary }]}>
                     Entregar
+                  </Text>
+                </TouchableOpacity>
+              ) : esDocente ? (
+                <TouchableOpacity
+                  style={[styles.completeBtn, { borderColor: Colors.primary }]}
+                  onPress={() => navigation.navigate('EntregasTarea', { tareaId: item.id, tareaTitulo: item.titulo, claseId })}
+                >
+                  <Text style={[styles.statusText, { color: Colors.primary }]}>
+                    Ver {textoEstado(item)}
                   </Text>
                 </TouchableOpacity>
               ) : (

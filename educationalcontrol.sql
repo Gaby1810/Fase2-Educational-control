@@ -33,6 +33,7 @@ CREATE TABLE `asistencia` (
   PRIMARY KEY (`id`),
   KEY `clase_id` (`clase_id`),
   KEY `estudiante_id` (`estudiante_id`),
+  UNIQUE KEY `idx_asistencia_unica` (`clase_id`, `estudiante_id`, `fecha`),
   CONSTRAINT `asistencia_ibfk_1` FOREIGN KEY (`clase_id`) REFERENCES `clases` (`id`) ON DELETE CASCADE,
   CONSTRAINT `asistencia_ibfk_2` FOREIGN KEY (`estudiante_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -48,6 +49,7 @@ DROP TABLE IF EXISTS `clases`;
 CREATE TABLE `clases` (
   `id` int NOT NULL AUTO_INCREMENT,
   `nombre` varchar(100) NOT NULL,
+  `descripcion` text DEFAULT NULL,
   `codigo_clase` varchar(50) NOT NULL,
   `grado` varchar(20) DEFAULT NULL,
   `seccion` varchar(10) DEFAULT NULL,
@@ -194,12 +196,13 @@ CREATE TABLE `usuarios` (
   `nombre` varchar(100) DEFAULT NULL,
   `correo` varchar(100) DEFAULT NULL,
   `password` varchar(255) DEFAULT NULL,
-  `rol` enum('estudiante','docente') DEFAULT NULL,
+  `rol` enum('estudiante','docente','administrador') DEFAULT NULL,
   `grado` varchar(20) DEFAULT NULL,
   `seccion` varchar(10) DEFAULT NULL,
   `turno` varchar(20) DEFAULT NULL,
   `materia_principal` varchar(100) DEFAULT NULL,
   `telefono` varchar(20) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `correo` (`correo`)
 ) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -215,3 +218,15 @@ CREATE TABLE `usuarios` (
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
 -- Dump completed on 2026-05-14 16:55:52
+
+-- Insert Administrator
+INSERT INTO usuarios (nombre, correo, password, rol)
+VALUES (
+  'Administrador General',
+  'admin@educational.com',
+  '$2b$10$A.SUnNHsdmydaOsl8rc0J.mAdO3D3ZvSnKtH7c32STivEwjmTtlDO',
+  'administrador'
+)
+ON DUPLICATE KEY UPDATE 
+  password = '$2b$10$A.SUnNHsdmydaOsl8rc0J.mAdO3D3ZvSnKtH7c32STivEwjmTtlDO',
+  rol = 'administrador';

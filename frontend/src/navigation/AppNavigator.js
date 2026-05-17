@@ -13,7 +13,7 @@ import DashboardScreen      from '../screens/DashboardScreen';
 import ClasesListScreen     from '../screens/ClasesListScreen';
 import DetalleClaseScreen   from '../screens/DetalleClaseScreen';
 import MaterialesScreen     from '../screens/MaterialScreen';
-import SubirMaterialScreen  from '../screens/SubirMaterialScreen';
+import EntregasTareaScreen  from '../screens/EntregasTareaScreen';
 import TareasScreen         from '../screens/TareasScreen';
 import SubirTareaScreen     from '../screens/SubirTareaScreen';
 import NotasScreen          from '../screens/NotasScreen';
@@ -21,6 +21,7 @@ import AsistenciaScreen     from '../screens/AsistenciaScreen';
 import DetalleMaterialScreen from '../screens/DetalleMaterialScreen';
 import PerfilScreen         from '../screens/PerfilScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
+import EstudiantesScreen    from '../screens/EstudiantesScreen';
 
 // ── NUEVAS PANTALLAS ADMIN ──────────────────────────────────
 import AdminDashboardScreen from '../screens/AdminDashboardScreen';
@@ -76,7 +77,8 @@ export default function AppNavigator() {
       <Stack.Screen name="Notas"           component={NotasScreen} />
       <Stack.Screen name="Asistencia"      component={AsistenciaScreen} />
       <Stack.Screen name="Perfil"          component={PerfilScreen} />
-      <Stack.Screen name="SubirMaterial"   component={SubirMaterialScreen} />
+      <Stack.Screen name="EntregasTarea"   component={EntregasTareaScreen} />
+      <Stack.Screen name="Estudiantes"     component={EstudiantesScreen} />
 
       <Stack.Screen
         name="ForgotPassword"

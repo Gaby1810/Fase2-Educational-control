@@ -42,24 +42,49 @@ const aceptarArchivo = upload.fields([
 router.get('/:claseId', auth, (req, res) => {
 
     const { claseId } = req.params;
+    const { id, rol } = req.usuario;
 
-    const sql = `
-        SELECT *
-        FROM materiales
-        WHERE clase_id = ?
-        ORDER BY id DESC
-    `;
+    let validarSql;
+    let params;
 
-    db.query(sql, [claseId], (err, results) => {
+    if (rol === 'estudiante') {
+        validarSql = `SELECT id FROM inscripciones WHERE clase_id = ? AND estudiante_id = ? LIMIT 1`;
+        params = [claseId, id];
+    } else if (rol === 'docente') {
+        validarSql = `SELECT id FROM clases WHERE id = ? AND docente_id = ? LIMIT 1`;
+        params = [claseId, id];
+    } else {
+        validarSql = `SELECT 1`;
+        params = [];
+    }
 
+    db.query(validarSql, params, (err, rows) => {
         if (err) {
             console.log(err);
-            return res.status(500).json({
-                error: 'Error obteniendo materiales'
-            });
+            return res.status(500).json({ error: "Error al validar permisos" });
+        }
+        if (rol !== 'administrador' && rows.length === 0) {
+            return res.status(403).json({ error: "No tienes acceso a los materiales de esta clase" });
         }
 
-        res.json(results);
+        const sql = `
+            SELECT *
+            FROM materiales
+            WHERE clase_id = ?
+            ORDER BY id DESC
+        `;
+
+        db.query(sql, [claseId], (err, results) => {
+
+            if (err) {
+                console.log(err);
+                return res.status(500).json({
+                    error: 'Error obteniendo materiales'
+                });
+            }
+
+            res.json(results);
+        });
     });
 });
 
@@ -117,7 +142,43 @@ function crearMaterialHandler(req, res) {
     }
 }
 
-router.post('/', auth, requireRole('docente'), aceptarArchivo, crearMaterialHandler);
-router.post('/subir', auth, requireRole('docente'), aceptarArchivo, crearMaterialHandler);
+router.post('/', auth, requireRole('docente', 'administrador'), aceptarArchivo, crearMaterialHandler);
+router.post('/subir', auth, requireRole('docente', 'administrador'), aceptarArchivo, crearMaterialHandler);
+
+// =====================
+// ELIMINAR MATERIAL
+// =====================
+router.delete('/:id', auth, requireRole('docente', 'administrador'), (req, res) => {
+    const { id } = req.params;
+    const docenteId = req.usuario.id;
+
+    const sqlVerify = `
+        SELECT m.id, m.archivo
+        FROM materiales m
+        INNER JOIN clases c ON c.id = m.clase_id
+        WHERE m.id = ? AND c.docente_id = ?
+    `;
+
+    db.query(sqlVerify, [id, docenteId], (err, rows) => {
+        if (err) return res.status(500).json({ error: "Error validando permiso" });
+        if (rows.length === 0) return res.status(403).json({ error: "No tienes permiso para eliminar este material" });
+
+        const archivo = rows[0].archivo;
+
+        db.query("DELETE FROM materiales WHERE id = ?", [id], (err, result) => {
+            if (err) return res.status(500).json({ error: "Error al eliminar material" });
+
+            // Eliminar archivo físico si existe
+            if (archivo) {
+                const filePath = path.join(uploadsDir, archivo);
+                if (fs.existsSync(filePath)) {
+                    fs.unlinkSync(filePath);
+                }
+            }
+
+            res.json({ message: "Material eliminado" });
+        });
+    });
+});
 
 module.exports = router;

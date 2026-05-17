@@ -6,12 +6,13 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
+  TextInput
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 import { useAuth } from '../contexts/AuthContext';
-import { get } from '../services/api';
+import { get, put } from '../services/api';
 
 const mesesNombre = {
   1: 'Ene',
@@ -34,11 +35,18 @@ export default function PerfilScreen({ navigation }) {
 
   const [loading, setLoading] = useState(true);
   const [reporte, setReporte] = useState(null);
+  
+  const [editMode, setEditMode] = useState(false);
+  const [guardando, setGuardando] = useState(false);
+  const [form, setForm] = useState({ nombre: '', telefono: '' });
 
   useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', cargarReporte);
+    const unsubscribe = navigation.addListener('focus', () => {
+      setForm({ nombre: usuario?.nombre || '', telefono: usuario?.telefono || '' });
+      cargarReporte();
+    });
     return unsubscribe;
-  }, [navigation]);
+  }, [navigation, usuario]);
 
   const cargarReporte = async () => {
     try {
@@ -71,6 +79,21 @@ export default function PerfilScreen({ navigation }) {
     return Number(((Number(materia.presentes || 0) / total) * 100).toFixed(1));
   };
 
+  const handleGuardarPerfil = async () => {
+    if (!form.nombre.trim()) return;
+    try {
+      setGuardando(true);
+      const res = await put('/auth/perfil', { nombre: form.nombre, telefono: form.telefono });
+      usuario.nombre = form.nombre;
+      usuario.telefono = form.telefono;
+      setEditMode(false);
+    } catch (e) {
+      console.log('Error', e.message);
+    } finally {
+      setGuardando(false);
+    }
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: Colors.background }]}>
       <View style={[styles.header, { backgroundColor: Colors.surfaceContainerHighest }]}>
@@ -99,15 +122,62 @@ export default function PerfilScreen({ navigation }) {
           </View>
 
           <View style={{ flex: 1, marginLeft: 14 }}>
-            <Text style={[styles.name, { color: Colors.onSurface }]} numberOfLines={1}>
-              {usuario?.nombre || 'Estudiante'}
-            </Text>
-            <Text style={[styles.email, { color: Colors.onSurfaceVariant }]} numberOfLines={1}>
-              {usuario?.correo || 'Sin correo'}
-            </Text>
-            <Text style={[styles.meta, { color: Colors.primary }]}>
-              {usuario?.grado || 'Grado'} - Seccion {usuario?.seccion || '-'} - {anioActual}
-            </Text>
+            {!editMode ? (
+              <>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={[styles.name, { color: Colors.onSurface, flex: 1 }]} numberOfLines={1}>
+                    {usuario?.nombre || 'Estudiante'}
+                  </Text>
+                  <TouchableOpacity onPress={() => setEditMode(true)} style={{ padding: 5 }}>
+                    <MaterialCommunityIcons name="pencil" size={20} color={Colors.primary} />
+                  </TouchableOpacity>
+                </View>
+                <Text style={[styles.email, { color: Colors.onSurfaceVariant }]} numberOfLines={1}>
+                  {usuario?.correo || 'Sin correo'}
+                </Text>
+                {usuario?.telefono && (
+                  <Text style={[styles.email, { color: Colors.onSurfaceVariant }]} numberOfLines={1}>
+                    {usuario.telefono}
+                  </Text>
+                )}
+                <Text style={[styles.meta, { color: Colors.primary }]}>
+                  {usuario?.rol === 'docente' ? 'Docente' : `${usuario?.grado || 'Grado'} - Seccion ${usuario?.seccion || '-'} ${usuario?.turno ? `- Turno ${usuario.turno}` : ''}`} - {anioActual}
+                </Text>
+              </>
+            ) : (
+              <View style={{ gap: 10 }}>
+                <TextInput
+                  style={[styles.input, { color: Colors.onSurface }]}
+                  value={form.nombre}
+                  onChangeText={(t) => setForm({ ...form, nombre: t })}
+                  placeholder="Nombre completo"
+                  placeholderTextColor={Colors.onSurfaceVariant}
+                />
+                <TextInput
+                  style={[styles.input, { color: Colors.onSurface }]}
+                  value={form.telefono}
+                  onChangeText={(t) => setForm({ ...form, telefono: t })}
+                  placeholder="Teléfono"
+                  placeholderTextColor={Colors.onSurfaceVariant}
+                  keyboardType="phone-pad"
+                />
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 5 }}>
+                  <TouchableOpacity 
+                    style={[styles.editBtn, { backgroundColor: Colors.surfaceContainerHighest, flex: 1 }]} 
+                    onPress={() => setEditMode(false)}
+                  >
+                    <Text style={{ color: Colors.onSurface, fontWeight: 'bold' }}>Cancelar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.editBtn, { backgroundColor: Colors.primary, flex: 1 }]} 
+                    onPress={handleGuardarPerfil}
+                    disabled={guardando}
+                  >
+                    {guardando ? <ActivityIndicator size="small" color={Colors.onPrimary} /> : <Text style={{ color: Colors.onPrimary, fontWeight: 'bold' }}>Guardar</Text>}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
           </View>
         </View>
 
@@ -275,6 +345,21 @@ const styles = StyleSheet.create({
   name: { fontSize: 17, fontWeight: '900' },
   email: { fontSize: 12, marginTop: 2 },
   meta: { fontSize: 12, fontWeight: '800', marginTop: 6 },
+  input: {
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    backgroundColor: 'rgba(255,255,255,0.05)'
+  },
+  editBtn: {
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
   loadingBox: { alignItems: 'center', marginTop: 40 },
   reportCard: { borderRadius: 20, padding: 18, marginBottom: 20 },
   reportHeader: {

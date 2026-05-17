@@ -18,8 +18,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { get, del } from '../services/api';
 
-const NAVY = '#0B2C74';
-const LIGHT_BG = '#F5F6FA';
+import { Colors } from '../constants/colors';
+
+// const NAVY = '#0B2C74';
+// const LIGHT_BG = '#F5F6FA';
 
 // Color por grado (cíclico)
 const GRADO_COLORS = ['#4F46E5','#0891B2','#059669','#D97706','#DC2626','#7C3AED','#DB2777'];
@@ -73,28 +75,28 @@ export default function AdminClasesScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: Colors.background }]}>
 
       {/* HEADER */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: Colors.surfaceContainerHighest }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={26} color="#fff" />
+          <Ionicons name="chevron-back" size={26} color={Colors.primary} />
         </TouchableOpacity>
         <TouchableOpacity onPress={cargar}>
-          <Ionicons name="refresh" size={22} color="#fff" />
+          <Ionicons name="refresh" size={22} color={Colors.primary} />
         </TouchableOpacity>
       </View>
 
       {/* TÍTULO */}
       <View style={styles.titleRow}>
-        <Text style={styles.pageTitle}>LISTA DE CLASES ({clases.length})</Text>
-        <View style={styles.cicloTag}>
-          <Text style={styles.cicloTxt}>Ciclo 2026</Text>
+        <Text style={[styles.pageTitle, { color: Colors.onSurfaceVariant }]}>LISTA DE CLASES ({clases.length})</Text>
+        <View style={[styles.cicloTag, { backgroundColor: Colors.surfaceContainerHighest }]}>
+          <Text style={[styles.cicloTxt, { color: Colors.primary }]}>Ciclo 2026</Text>
         </View>
       </View>
 
       {loading ? (
-        <ActivityIndicator size="large" color={NAVY} style={{ marginTop: 40 }} />
+        <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: 40 }} />
       ) : (
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -103,8 +105,8 @@ export default function AdminClasesScreen({ navigation }) {
         >
           {clases.length === 0 ? (
             <View style={styles.empty}>
-              <MaterialCommunityIcons name="book-open-outline" size={54} color="#ccc" />
-              <Text style={styles.emptyTxt}>No hay clases registradas</Text>
+              <MaterialCommunityIcons name="book-open-outline" size={54} color={Colors.outline} />
+              <Text style={[styles.emptyTxt, { color: Colors.onSurfaceVariant }]}>No hay clases registradas</Text>
             </View>
           ) : (
             clases.map(c => (
@@ -112,17 +114,18 @@ export default function AdminClasesScreen({ navigation }) {
                 key={c.id}
                 clase={c}
                 onEliminar={() => confirmarEliminar(c)}
+                onVerListado={() => navigation.navigate('Asistencia', { claseId: c.id, nombreClase: c.nombre })}
                 gradoColor={gradoColor(c.grado)}
               />
             ))
           )}
 
-          <Text style={styles.finLista}>Fin de la lista de gestión</Text>
+          <Text style={[styles.finLista, { color: Colors.outlineVariant }]}>Fin de la lista de gestión</Text>
         </ScrollView>
       )}
 
       {/* BOTTOM NAV */}
-      <View style={styles.bottomNav}>
+      <View style={[styles.bottomNav, { backgroundColor: Colors.surfaceContainerLowest, borderColor: Colors.outlineVariant }]}>
         <NavItem icon="home-outline"      label="Inicio"   onPress={() => navigation.navigate('AdminDashboard')} />
         <NavItem icon="book"              label="Clases"   active />
         <NavItem icon="people-outline"    label="Usuarios" onPress={() => navigation.navigate('AdminUsuarios')} />
@@ -133,26 +136,26 @@ export default function AdminClasesScreen({ navigation }) {
   );
 }
 
-function ClaseCard({ clase, onEliminar, gradoColor }) {
+function ClaseCard({ clase, onEliminar, onVerListado, gradoColor }) {
   const avatares = ['👤', '👤', '👤'];
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { backgroundColor: Colors.surfaceContainerLow }]}>
 
       {/* Nombre + iconos de acción */}
       <View style={styles.cardTop}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.cardNombre}>{clase.nombre}</Text>
+          <Text style={[styles.cardNombre, { color: Colors.onSurface }]}>{clase.nombre}</Text>
           <View style={styles.asignaturaRow}>
-            <MaterialCommunityIcons name="book" size={14} color={NAVY} />
-            <Text style={styles.asignatura}>{clase.nombre}</Text>
+            <MaterialCommunityIcons name="book" size={14} color={Colors.primary} />
+            <Text style={[styles.asignatura, { color: Colors.primary }]}>{clase.nombre}</Text>
           </View>
         </View>
         <TouchableOpacity style={styles.iconBtn}>
-          <Ionicons name="pencil-outline" size={18} color="#aaa" />
+          <Ionicons name="pencil-outline" size={18} color={Colors.outline} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.iconBtn} onPress={onEliminar}>
-          <Ionicons name="trash-outline" size={18} color="#aaa" />
+          <Ionicons name="trash-outline" size={18} color={Colors.error} />
         </TouchableOpacity>
       </View>
 
@@ -165,19 +168,19 @@ function ClaseCard({ clase, onEliminar, gradoColor }) {
       </View>
 
       {/* Footer */}
-      <View style={styles.cardFooter}>
+      <View style={[styles.cardFooter, { borderColor: Colors.outlineVariant }]}>
         <View style={styles.avatarRow}>
           {avatares.map((a, i) => (
-            <View key={i} style={[styles.avatarMini, { marginLeft: i > 0 ? -8 : 0, zIndex: 3 - i }]}>
+            <View key={i} style={[styles.avatarMini, { backgroundColor: Colors.surfaceContainerHighest, borderColor: Colors.surfaceContainerLow, marginLeft: i > 0 ? -8 : 0, zIndex: 3 - i }]}>
               <Text style={{ fontSize: 14 }}>{a}</Text>
             </View>
           ))}
-          <Text style={styles.totalEst}>
+          <Text style={[styles.totalEst, { color: Colors.onSurfaceVariant }]}>
             +{clase.total_estudiantes ?? 0} estudiantes
           </Text>
         </View>
-        <TouchableOpacity style={styles.verListadoBtn}>
-          <Text style={styles.verListadoTxt}>Ver Listado</Text>
+        <TouchableOpacity style={[styles.verListadoBtn, { borderColor: Colors.outline }]} onPress={onVerListado}>
+          <Text style={[styles.verListadoTxt, { color: Colors.onSurface }]}>Ver Asistencia</Text>
         </TouchableOpacity>
       </View>
 
@@ -188,15 +191,15 @@ function ClaseCard({ clase, onEliminar, gradoColor }) {
 function MetaItem({ label, value, icon, highlight, status }) {
   return (
     <View style={styles.metaItem}>
-      <Text style={styles.metaLabel}>{label}</Text>
+      <Text style={[styles.metaLabel, { color: Colors.onSurfaceVariant }]}>{label}</Text>
       <View style={styles.metaValueRow}>
-        {icon && <Ionicons name={icon} size={13} color={highlight ? NAVY : '#777'} style={{ marginRight: 3 }} />}
+        {icon && <Ionicons name={icon} size={13} color={highlight ? Colors.primary : Colors.outline} style={{ marginRight: 3 }} />}
         {status ? (
-          <View style={styles.statusBadge}>
-            <Text style={styles.statusTxt}>{value}</Text>
+          <View style={[styles.statusBadge, { backgroundColor: Colors.secondary + '22' }]}>
+            <Text style={[styles.statusTxt, { color: Colors.secondary }]}>{value}</Text>
           </View>
         ) : (
-          <Text style={[styles.metaValue, highlight && { color: NAVY, fontWeight: '700' }]}>
+          <Text style={[styles.metaValue, { color: Colors.onSurface }, highlight && { color: Colors.primary, fontWeight: '700' }]}>
             {value}
           </Text>
         )}
@@ -208,16 +211,16 @@ function MetaItem({ label, value, icon, highlight, status }) {
 function NavItem({ icon, label, active, onPress }) {
   return (
     <TouchableOpacity style={styles.navItem} onPress={onPress}>
-      <Ionicons name={icon} size={24} color={active ? NAVY : '#888'} />
-      <Text style={[styles.navLabel, active && { color: NAVY }]}>{label}</Text>
+      <Ionicons name={icon} size={24} color={active ? Colors.primary : Colors.outline} />
+      <Text style={[styles.navLabel, { color: Colors.outline }, active && { color: Colors.primary }]}>{label}</Text>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: LIGHT_BG },
+  container: { flex: 1 },
   header: {
-    height: 60, backgroundColor: NAVY,
+    height: 60,
     flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between', paddingHorizontal: 16,
   },
@@ -227,23 +230,23 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 12,
   },
-  pageTitle: { fontSize: 12, fontWeight: '700', color: '#666', letterSpacing: 0.5 },
-  cicloTag:  { backgroundColor: '#EEF0FF', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4 },
-  cicloTxt:  { color: NAVY, fontSize: 12, fontWeight: '600' },
+  pageTitle: { fontSize: 12, fontWeight: '700', letterSpacing: 0.5 },
+  cicloTag:  { borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4 },
+  cicloTxt:  { fontSize: 12, fontWeight: '600' },
 
   empty:    { alignItems: 'center', marginTop: 60 },
-  emptyTxt: { color: '#aaa', marginTop: 10, fontSize: 14 },
-  finLista: { textAlign: 'center', color: '#ccc', fontSize: 12, marginTop: 16 },
+  emptyTxt: { marginTop: 10, fontSize: 14 },
+  finLista: { textAlign: 'center', fontSize: 12, marginTop: 16 },
 
   // Card
   card: {
-    backgroundColor: '#fff', borderRadius: 14,
+    borderRadius: 14,
     marginBottom: 16, padding: 16, elevation: 2,
   },
   cardTop: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
-  cardNombre: { fontSize: 17, fontWeight: '700', color: '#111' },
+  cardNombre: { fontSize: 17, fontWeight: '700' },
   asignaturaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
-  asignatura: { fontSize: 13, color: NAVY, marginLeft: 4 },
+  asignatura: { fontSize: 13, color: Colors.primary, marginLeft: 4 },
   iconBtn: { padding: 6 },
 
   metaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 12 },
