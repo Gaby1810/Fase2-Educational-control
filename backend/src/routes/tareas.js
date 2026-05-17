@@ -296,7 +296,7 @@ router.get('/clase/:claseId', auth, (req, res) => {
 router.post('/crear', auth, requireRole('docente', 'administrador'), aceptarArchivo, (req, res) => {
 
     const { titulo, descripcion, instrucciones, fecha_entrega, clase_id } = req.body;
-    const docenteId = req.usuario.id;
+    const { id: usuarioId, rol } = req.usuario;
     const textoInstrucciones = instrucciones || descripcion || null;
     const archivoSubido = extraerArchivo(req);
 
@@ -306,9 +306,15 @@ router.post('/crear', auth, requireRole('docente', 'administrador'), aceptarArch
         });
     }
 
+    // Admin: cualquier clase. Docente: solo las suyas.
+    const verifSql = rol === 'administrador'
+        ? "SELECT id FROM clases WHERE id = ?"
+        : "SELECT id FROM clases WHERE id = ? AND docente_id = ?";
+    const verifParams = rol === 'administrador' ? [clase_id] : [clase_id, usuarioId];
+
     db.query(
-        "SELECT id FROM clases WHERE id = ? AND docente_id = ?",
-        [clase_id, docenteId],
+        verifSql,
+        verifParams,
         (err, rows) => {
 
             if (err) {
@@ -349,17 +355,19 @@ router.post('/crear', auth, requireRole('docente', 'administrador'), aceptarArch
 // =====================
 router.get('/:tareaId/entregas', auth, requireRole('docente', 'administrador'), (req, res) => {
     const { tareaId } = req.params;
-    const docenteId = req.usuario.id;
+    const { id: usuarioId, rol } = req.usuario;
 
-    const validarSql = `
-        SELECT t.id
-        FROM tareas t
-        INNER JOIN clases c ON c.id = t.clase_id
-        WHERE t.id = ? AND c.docente_id = ?
-        LIMIT 1
-    `;
+    // Admin: cualquier tarea. Docente: solo las de sus clases.
+    const validarSql = rol === 'administrador'
+        ? `SELECT id FROM tareas WHERE id = ? LIMIT 1`
+        : `SELECT t.id
+           FROM tareas t
+           INNER JOIN clases c ON c.id = t.clase_id
+           WHERE t.id = ? AND c.docente_id = ?
+           LIMIT 1`;
+    const validarParams = rol === 'administrador' ? [tareaId] : [tareaId, usuarioId];
 
-    db.query(validarSql, [tareaId, docenteId], (err, rows) => {
+    db.query(validarSql, validarParams, (err, rows) => {
         if (err) {
             console.log(err);
             return res.status(500).json({ error: "Error al validar tarea" });
@@ -374,9 +382,15 @@ router.get('/:tareaId/entregas', auth, requireRole('docente', 'administrador'), 
                 et.archivo,
                 et.fecha_entrega,
                 u.id AS estudiante_id,
-                u.nombre AS estudiante_nombre
+                u.nombre AS estudiante_nombre,
+                n.calificacion AS nota
             FROM entrega_tareas et
             INNER JOIN usuarios u ON u.id = et.estudiante_id
+            INNER JOIN tareas t ON t.id = et.tarea_id
+            LEFT JOIN notas n
+                ON n.estudiante_id = et.estudiante_id
+                AND n.clase_id = t.clase_id
+                AND n.evaluacion = t.titulo
             WHERE et.tarea_id = ?
             ORDER BY et.fecha_entrega DESC
         `;
@@ -392,20 +406,67 @@ router.get('/:tareaId/entregas', auth, requireRole('docente', 'administrador'), 
 });
 
 // =====================
+// EDITAR TAREA (Docente dueño / Admin)
+// PUT /api/tareas/:id
+// =====================
+router.put('/:id', auth, requireRole('docente', 'administrador'), (req, res) => {
+
+    const { id } = req.params;
+    const { titulo, descripcion, instrucciones, fecha_entrega } = req.body;
+    const { id: usuarioId, rol } = req.usuario;
+    const textoInstrucciones = instrucciones || descripcion || null;
+
+    if (!titulo) {
+        return res.status(400).json({ error: "El título es obligatorio" });
+    }
+
+    const sqlVerify = `
+        SELECT t.id, c.docente_id
+        FROM tareas t
+        INNER JOIN clases c ON c.id = t.clase_id
+        WHERE t.id = ?
+    `;
+
+    db.query(sqlVerify, [id], (err, rows) => {
+        if (err) return res.status(500).json({ error: "Error validando permiso" });
+        if (rows.length === 0) return res.status(404).json({ error: "Tarea no encontrada" });
+
+        if (rol !== 'administrador' && rows[0].docente_id !== usuarioId) {
+            return res.status(403).json({ error: "No puedes editar esta tarea" });
+        }
+
+        db.query(
+            "UPDATE tareas SET titulo = ?, instrucciones = ?, fecha_entrega = ? WHERE id = ?",
+            [String(titulo).trim(), textoInstrucciones, fecha_entrega || null, id],
+            (err2) => {
+                if (err2) {
+                    console.log(err2);
+                    return res.status(500).json({ error: "Error al actualizar tarea" });
+                }
+                res.json({ ok: true, mensaje: "Tarea actualizada correctamente" });
+            }
+        );
+    });
+});
+
+
+// =====================
 // ELIMINAR TAREA
 // =====================
 router.delete('/:id', auth, requireRole('docente', 'administrador'), (req, res) => {
     const { id } = req.params;
-    const docenteId = req.usuario.id;
+    const { id: usuarioId, rol } = req.usuario;
 
-    const sqlVerify = `
-        SELECT t.id, t.archivo
-        FROM tareas t
-        INNER JOIN clases c ON c.id = t.clase_id
-        WHERE t.id = ? AND c.docente_id = ?
-    `;
+    // Admin: cualquier tarea. Docente: solo las de sus clases.
+    const sqlVerify = rol === 'administrador'
+        ? `SELECT t.id, t.archivo FROM tareas t WHERE t.id = ?`
+        : `SELECT t.id, t.archivo
+           FROM tareas t
+           INNER JOIN clases c ON c.id = t.clase_id
+           WHERE t.id = ? AND c.docente_id = ?`;
+    const verifParams = rol === 'administrador' ? [id] : [id, usuarioId];
 
-    db.query(sqlVerify, [id, docenteId], (err, rows) => {
+    db.query(sqlVerify, verifParams, (err, rows) => {
         if (err) return res.status(500).json({ error: "Error validando permiso" });
         if (rows.length === 0) return res.status(403).json({ error: "No tienes permiso para eliminar esta tarea" });
 

@@ -35,14 +35,8 @@ export default function DashboardScreen({ navigation }) {
           text: "Sí, salir",
           style: "destructive",
           onPress: async () => {
-
+            // Al cerrar sesión, el AppNavigator vuelve solo al stack público
             await logout();
-
-            navigation.reset({
-              index: 0,
-              routes: [{ name: "Home" }],
-            });
-
           }
         }
       ]

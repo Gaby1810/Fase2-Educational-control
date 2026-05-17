@@ -5,7 +5,6 @@ import {
   View,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   ActivityIndicator,
   Alert,
   Linking,
@@ -13,6 +12,7 @@ import {
   KeyboardAvoidingView,
   Platform
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
@@ -35,7 +35,17 @@ export default function EntregasTareaScreen({ route, navigation }) {
     try {
       setLoading(true);
       const data = await get(`/tareas/${tareaId}/entregas`);
-      setEntregas(Array.isArray(data) ? data : []);
+      const lista = Array.isArray(data) ? data : [];
+      setEntregas(lista);
+
+      // Prellenar el input con la nota ya asignada (si existe)
+      const notasPrevias = {};
+      lista.forEach((e) => {
+        if (e.nota !== null && e.nota !== undefined) {
+          notasPrevias[e.estudiante_id] = String(e.nota);
+        }
+      });
+      setCalificaciones(notasPrevias);
     } catch (e) {
       console.log('Error obteniendo entregas:', e.message);
       Alert.alert("Error", "No se pudieron cargar las entregas");
@@ -62,20 +72,22 @@ export default function EntregasTareaScreen({ route, navigation }) {
 
   const calificarEntrega = async (estudianteId) => {
     const nota = calificaciones[estudianteId];
-    if (!nota || isNaN(nota) || nota < 0 || nota > 100) {
-      Alert.alert('Invalido', 'Ingrese una calificación válida entre 0 y 100');
+    const valor = parseFloat(nota);
+    if (nota === undefined || nota === '' || isNaN(valor) || valor < 0 || valor > 10) {
+      Alert.alert('Inválido', 'Ingrese una calificación válida entre 0 y 10');
       return;
     }
 
     try {
       setGuardandoNota(estudianteId);
       await post('/notas/guardar', {
-        calificacion: parseFloat(nota),
+        calificacion: valor,
         evaluacion: tareaTitulo,
         clase_id: claseId,
         estudiante_id: estudianteId
       });
       Alert.alert('Éxito', 'Calificación guardada correctamente');
+      await cargarEntregas();
     } catch (error) {
       Alert.alert('Error', error.message || 'No se pudo guardar la calificación');
     } finally {
@@ -145,11 +157,29 @@ export default function EntregasTareaScreen({ route, navigation }) {
               </TouchableOpacity>
             )}
 
+            {/* ESTADO DE CALIFICACIÓN */}
+            {entrega.nota !== null && entrega.nota !== undefined && (
+              <View style={[styles.notaBadge, { backgroundColor: Colors.secondary + '22' }]}>
+                <MaterialCommunityIcons name="star-check" size={16} color={Colors.secondary} />
+                <Text style={[styles.notaBadgeText, { color: Colors.secondary }]}>
+                  Calificado: {Number(entrega.nota).toFixed(1)} / 10
+                </Text>
+              </View>
+            )}
+
             {/* SECCIÓN DE CALIFICACIÓN */}
-            <View style={styles.gradeSection}>
+            <View style={[styles.gradeSection, { borderTopColor: Colors.outlineVariant }]}>
               <TextInput
-                style={styles.gradeInput}
-                placeholder="Nota (0-100)"
+                style={[
+                  styles.gradeInput,
+                  {
+                    backgroundColor: Colors.surfaceContainerHighest,
+                    borderColor: Colors.outlineVariant,
+                    color: Colors.onSurface
+                  }
+                ]}
+                placeholder="Nota (0-10)"
+                placeholderTextColor={Colors.onSurfaceVariant}
                 keyboardType="numeric"
                 value={calificaciones[entrega.estudiante_id] || ''}
                 onChangeText={(val) => setCalificaciones(prev => ({ ...prev, [entrega.estudiante_id]: val }))}
@@ -160,9 +190,11 @@ export default function EntregasTareaScreen({ route, navigation }) {
                 disabled={guardandoNota === entrega.estudiante_id}
               >
                 {guardandoNota === entrega.estudiante_id ? (
-                  <ActivityIndicator size="small" color="#FFF" />
+                  <ActivityIndicator size="small" color={Colors.onPrimary} />
                 ) : (
-                  <Text style={styles.gradeBtnText}>Calificar</Text>
+                  <Text style={[styles.gradeBtnText, { color: Colors.onPrimary }]}>
+                    {entrega.nota !== null && entrega.nota !== undefined ? 'Actualizar' : 'Calificar'}
+                  </Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -208,29 +240,40 @@ const styles = StyleSheet.create({
     marginTop: 15,
     paddingTop: 15,
     borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
     alignItems: 'center'
   },
   gradeInput: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#CCC',
     borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 10,
     marginRight: 10,
-    backgroundColor: '#FFF'
+    fontSize: 15
   },
   gradeBtn: {
     paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center'
   },
   gradeBtnText: {
-    color: '#FFF',
     fontWeight: 'bold',
     fontSize: 14
+  },
+  notaBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    gap: 6,
+    marginTop: 10
+  },
+  notaBadgeText: {
+    fontSize: 12,
+    fontWeight: 'bold'
   }
 });

@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
-  SafeAreaView,
   StatusBar,
   Image,
   Dimensions,
@@ -17,9 +16,11 @@ import {
   RefreshControl
 } from 'react-native';
 
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 import { Ionicons } from '@expo/vector-icons';
 
-import { get, post } from '../services/api';
+import { get, post, put } from '../services/api';
 
 import { Colors } from '../constants/colors';
 
@@ -47,11 +48,8 @@ export default function ClasesListScreen({ navigation }) {
           text: "Sí, salir",
           style: "destructive",
           onPress: async () => {
+            // Al cerrar sesión, el AppNavigator vuelve solo al stack público
             await logout();
-            navigation.reset({
-              index: 0,
-              routes: [{ name: "Home" }]
-            });
           }
         }
       ]
@@ -61,6 +59,9 @@ export default function ClasesListScreen({ navigation }) {
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [clases, setClases] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Clase que se está editando (null = modo crear)
+  const [claseEditando, setClaseEditando] = useState(null);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -175,34 +176,54 @@ export default function ClasesListScreen({ navigation }) {
       console.log("Error al obtener clases:", error);
     }
   };
+  // Abrir el formulario en modo edición
+  const iniciarEdicionClase = (item) => {
+    setClaseEditando(item);
+    setForm({
+      nombre: item.nombre || '',
+      grado: item.grado || '',
+      seccion: item.seccion || ''
+    });
+    setMostrarFormulario(true);
+  };
+
+  // Cerrar/cancelar el formulario
+  const cerrarFormularioClase = () => {
+    setMostrarFormulario(false);
+    setClaseEditando(null);
+    setForm({ nombre: '', grado: '', seccion: '' });
+  };
+
   // =====================================
-  // CREAR CLASE
+  // CREAR / EDITAR CLASE
   // =====================================
 
   const handleCrearClase = async () => {
 
     if (!form.nombre || !form.grado) {
-
-      Alert.alert(
-        "Campos incompletos",
-        "Completa nombre y grado"
-      );
-
+      Alert.alert("Campos incompletos", "Completa materia y grado");
       return;
     }
 
     try {
 
-      const res =
-        await post(
-          "/clases/crear",
-          form
-        );
+      if (claseEditando) {
+        // EDITAR
+        await put(`/clases/${claseEditando.id}`, {
+          nombre: form.nombre,
+          grado: form.grado,
+          seccion: form.seccion
+        });
+        Alert.alert("Clase actualizada", "Los cambios se guardaron correctamente");
+        cerrarFormularioClase();
+        cargarClases();
+        return;
+      }
 
-      Alert.alert(
-        "Clase creada",
-        `Código: ${res.codigo_clase}`
-      );
+      // CREAR
+      const res = await post("/clases/crear", form);
+
+      Alert.alert("Clase creada", `Código: ${res.codigo_clase}`);
 
       const nuevaClase = {
         id: res.id,
@@ -212,30 +233,13 @@ export default function ClasesListScreen({ navigation }) {
         codigo_clase: res.codigo_clase
       };
 
-      setMostrarFormulario(false);
-
-      setForm({
-        nombre: '',
-        grado: '',
-        seccion: ''
-      });
-
+      cerrarFormularioClase();
       cargarClases();
 
-      // NAVEGAR
-      navigation.navigate(
-        "DetalleClase",
-        {
-          clase: nuevaClase
-        }
-      );
+      navigation.navigate("DetalleClase", { clase: nuevaClase });
 
     } catch (error) {
-
-      Alert.alert(
-        "Error",
-        error.message
-      );
+      Alert.alert("Error", error.message);
     }
   };
 
@@ -355,11 +359,15 @@ export default function ClasesListScreen({ navigation }) {
           {esDocente && (
             <TouchableOpacity
               style={styles.addBtnAction}
-              onPress={() =>
-                setMostrarFormulario(
-                  !mostrarFormulario
-                )
-              }
+              onPress={() => {
+                if (mostrarFormulario) {
+                  cerrarFormularioClase();
+                } else {
+                  setClaseEditando(null);
+                  setForm({ nombre: '', grado: '', seccion: '' });
+                  setMostrarFormulario(true);
+                }
+              }}
             >
 
               <Text
@@ -369,11 +377,11 @@ export default function ClasesListScreen({ navigation }) {
                   fontWeight: '600'
                 }}
               >
-                Crear
+                {mostrarFormulario ? 'Cerrar' : 'Crear'}
               </Text>
 
               <Ionicons
-                name="add-circle"
+                name={mostrarFormulario ? 'close-circle' : 'add-circle'}
                 size={32}
                 color={Colors.primary}
               />
@@ -422,6 +430,10 @@ export default function ClasesListScreen({ navigation }) {
               }
             ]}
           >
+
+            <Text style={[styles.label, { fontSize: 16, marginBottom: 14, color: Colors.primary }]}>
+              {claseEditando ? 'Editar clase' : 'Nueva clase'}
+            </Text>
 
             <Text style={styles.label}>
               Materia
@@ -474,7 +486,7 @@ export default function ClasesListScreen({ navigation }) {
             >
 
               <Text style={styles.btnText}>
-                PUBLICAR CLASE
+                {claseEditando ? 'GUARDAR CAMBIOS' : 'PUBLICAR CLASE'}
               </Text>
 
             </TouchableOpacity>
@@ -553,16 +565,32 @@ export default function ClasesListScreen({ navigation }) {
 
               </View>
 
-              <View style={styles.verClaseBadge}>
+              <View style={{ alignItems: 'flex-end' }}>
 
-                <Text
-                  style={{
-                    color: Colors.primary,
-                    fontWeight: 'bold'
-                  }}
-                >
-                  Ver más
-                </Text>
+                {esDocente && (
+                  <TouchableOpacity
+                    onPress={() => iniciarEdicionClase(item)}
+                    style={{ padding: 4, marginBottom: 8 }}
+                    hitSlop={8}
+                  >
+                    <Ionicons
+                      name="create-outline"
+                      size={22}
+                      color={Colors.primary}
+                    />
+                  </TouchableOpacity>
+                )}
+
+                <View style={styles.verClaseBadge}>
+                  <Text
+                    style={{
+                      color: Colors.primary,
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    Ver más
+                  </Text>
+                </View>
 
               </View>
 

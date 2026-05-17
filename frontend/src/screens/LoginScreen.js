@@ -41,16 +41,9 @@ export default function LoginScreen({ navigation }) {
         password: password
       });
 
+      // Al guardar la sesión, el AppNavigator cambia automáticamente
+      // al stack privado y muestra la pantalla inicial según el rol.
       await login(res.token, res.usuario);
-
-      // Estudiante → directo a sus clases (estilo Classroom)
-      // Docente   → al panel
-      const { rol } = res.usuario;
-      const destino =
-        rol === 'estudiante' ? 'ClasesList' :
-          rol === 'administrador' ? 'AdminDashboard' :
-            'Dashboard';
-      navigation.reset({ index: 0, routes: [{ name: destino }] });
 
     } catch (error) {
 

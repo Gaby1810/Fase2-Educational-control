@@ -309,10 +309,15 @@ router.delete('/:id/abandonar', auth, requireRole('estudiante'), (req, res) => {
 // =====================
 router.delete('/:claseId/estudiantes/:estudianteId', auth, requireRole('docente', 'administrador'), (req, res) => {
     const { claseId, estudianteId } = req.params;
-    const docenteId = req.usuario.id;
+    const { id: usuarioId, rol } = req.usuario;
 
-    // Verificar si la clase es del docente
-    db.query("SELECT id FROM clases WHERE id = ? AND docente_id = ?", [claseId, docenteId], (err, rows) => {
+    // Admin: cualquier clase. Docente: solo las suyas.
+    const verifSql = rol === 'administrador'
+        ? "SELECT id FROM clases WHERE id = ?"
+        : "SELECT id FROM clases WHERE id = ? AND docente_id = ?";
+    const verifParams = rol === 'administrador' ? [claseId] : [claseId, usuarioId];
+
+    db.query(verifSql, verifParams, (err, rows) => {
         if (err) return res.status(500).json({ error: "Error al validar la clase" });
         if (rows.length === 0) return res.status(403).json({ error: "No tienes permiso para modificar esta clase" });
 
@@ -323,6 +328,43 @@ router.delete('/:claseId/estudiantes/:estudianteId', auth, requireRole('docente'
         });
     });
 });
+
+// =====================
+// EDITAR CLASE (Docente dueño / Admin)
+// PUT /api/clases/:id
+// =====================
+router.put('/:id', auth, requireRole('docente', 'administrador'), (req, res) => {
+
+    const { id } = req.params;
+    const { nombre, grado, seccion } = req.body;
+    const { id: usuarioId, rol } = req.usuario;
+
+    if (!nombre || !grado) {
+        return res.status(400).json({ error: "Nombre y grado son obligatorios" });
+    }
+
+    db.query("SELECT docente_id FROM clases WHERE id = ?", [id], (err, rows) => {
+        if (err) return res.status(500).json({ error: "Error en servidor" });
+        if (rows.length === 0) return res.status(404).json({ error: "Clase no encontrada" });
+
+        if (rol !== 'administrador' && rows[0].docente_id !== usuarioId) {
+            return res.status(403).json({ error: "No puedes editar esta clase" });
+        }
+
+        db.query(
+            "UPDATE clases SET nombre = ?, grado = ?, seccion = ? WHERE id = ?",
+            [nombre, grado, seccion || null, id],
+            (err2) => {
+                if (err2) {
+                    console.log(err2);
+                    return res.status(500).json({ error: "Error al actualizar clase" });
+                }
+                res.json({ ok: true, mensaje: "Clase actualizada correctamente" });
+            }
+        );
+    });
+});
+
 
 // =====================
 // ELIMINAR CLASE COMPLETAMENTE (Docente / Admin)

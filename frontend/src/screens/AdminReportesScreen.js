@@ -3,7 +3,7 @@
 // Reportes institucionales para el Administrador
 // ===============================
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -11,15 +11,14 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
-  Alert,
   Dimensions,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { get } from '../services/api';
 
 import { Colors } from '../constants/colors';
+import useFetch from '../hooks/useFetch';
 
 // const NAVY = '#0B2C74';
 // const TEAL = '#14B8A6';
@@ -30,25 +29,14 @@ const { width: SCREEN_W } = Dimensions.get('window');
 
 export default function AdminReportesScreen({ navigation }) {
 
-  const [datos, setDatos]           = useState(null);
-  const [loading, setLoading]       = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const cargar = useCallback(async () => {
-    try {
-      const data = await get('/admin/reportes');
-      setDatos(data);
-    } catch (e) {
-      Alert.alert('Error', e.message || 'No se pudieron cargar los reportes');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => { cargar(); }, [cargar]);
-
-  const onRefresh = () => { setRefreshing(true); cargar(); };
+  // Toda la lógica de carga/recarga vive en el hook reutilizable
+  const {
+    data: datos,
+    loading,
+    refreshing,
+    refetch: cargar,
+    refresh: onRefresh,
+  } = useFetch('/admin/reportes');
 
   const maxEstudiantes = datos?.estudiantesPorGrado?.length
     ? Math.max(...datos.estudiantesPorGrado.map(g => g.total), 1)
@@ -190,7 +178,7 @@ export default function AdminReportesScreen({ navigation }) {
       )}
 
       {/* BOTTOM NAV */}
-      <View style={[styles.bottomNav, { backgroundColor: Colors.surfaceContainerLowest, borderColor: Colors.outlineVariant }]}>
+      <View style={[styles.bottomNav, { backgroundColor: Colors.surfaceContainerHighest, borderColor: Colors.outlineVariant }]}>
         <NavItem icon="home-outline"   label="Inicio"   onPress={() => navigation.navigate('AdminDashboard')} />
         <NavItem icon="book-outline"   label="Clases"   onPress={() => navigation.navigate('AdminClases')} />
         <NavItem icon="people-outline" label="Usuarios" onPress={() => navigation.navigate('AdminUsuarios')} />

@@ -9,7 +9,6 @@ import {
   View,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
   StatusBar,
   TextInput,
   Alert,
@@ -17,6 +16,7 @@ import {
   Dimensions,
   RefreshControl
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import * as DocumentPicker
 from 'expo-document-picker';
@@ -31,6 +31,7 @@ from '../constants/colors';
 import {
   get,
   post,
+  put,
   del
 }
 from '../services/api';
@@ -64,6 +65,9 @@ MaterialClaseScreen({
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [archivo, setArchivo] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Material que se está editando (null = modo crear)
+  const [materialEditando, setMaterialEditando] = useState(null);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -162,6 +166,25 @@ MaterialClaseScreen({
   // PUBLICAR MATERIAL
   // =========================
 
+  // Abrir el formulario en modo edición
+  const iniciarEdicion = (item) => {
+    setMaterialEditando(item);
+    setForm({
+      titulo: item.titulo || '',
+      descripcion: item.descripcion || ''
+    });
+    setArchivo(null);
+    setMostrarFormulario(true);
+  };
+
+  // Cerrar/cancelar el formulario
+  const cerrarFormulario = () => {
+    setMostrarFormulario(false);
+    setMaterialEditando(null);
+    setArchivo(null);
+    setForm({ titulo: '', descripcion: '' });
+  };
+
   const handlePublicar =
   async () => {
 
@@ -177,57 +200,34 @@ MaterialClaseScreen({
 
     try {
 
-      const formData =
-      new FormData();
+      if (materialEditando) {
+        // EDITAR (JSON, no se cambia el archivo)
+        await put(`/materiales/${materialEditando.id}`, {
+          titulo: form.titulo,
+          descripcion: form.descripcion
+        });
+        Alert.alert("Éxito", "Material actualizado");
 
-      formData.append(
-        'titulo',
-        form.titulo
-      );
+      } else {
+        // CREAR (FormData para adjuntar archivo)
+        const formData = new FormData();
+        formData.append('titulo', form.titulo);
+        formData.append('descripcion', form.descripcion);
+        formData.append('clase_id', clase.id);
 
-      formData.append(
-        'descripcion',
-        form.descripcion
-      );
-
-      formData.append(
-        'clase_id',
-        clase.id
-      );
-
-      if (archivo) {
-
-        formData.append(
-          'archivo',
-          {
+        if (archivo) {
+          formData.append('archivo', {
             uri: archivo.uri,
             name: archivo.name,
-            type:
-              archivo.mimeType ||
-              'application/pdf'
-          }
-        );
+            type: archivo.mimeType || 'application/pdf'
+          });
+        }
+
+        await post('/materiales', formData);
+        Alert.alert("Éxito", "Material publicado");
       }
 
-      await post(
-        '/materiales',
-        formData
-      );
-
-      Alert.alert(
-        "Éxito",
-        "Material publicado"
-      );
-
-      setMostrarFormulario(false);
-
-      setArchivo(null);
-
-      setForm({
-        titulo: '',
-        descripcion: ''
-      });
-
+      cerrarFormulario();
       cargarMateriales();
 
     } catch (error) {
@@ -321,19 +321,24 @@ MaterialClaseScreen({
             <TouchableOpacity
               style={styles.publicarAction}
 
-              onPress={() =>
-                setMostrarFormulario(
-                  !mostrarFormulario
-                )
-              }
+              onPress={() => {
+                if (mostrarFormulario) {
+                  cerrarFormulario();
+                } else {
+                  setMaterialEditando(null);
+                  setForm({ titulo: '', descripcion: '' });
+                  setArchivo(null);
+                  setMostrarFormulario(true);
+                }
+              }}
             >
 
               <Text style={styles.publicarLabel}>
-                Publicar
+                {mostrarFormulario ? 'Cerrar' : 'Publicar'}
               </Text>
 
               <Ionicons
-                name="add-circle"
+                name={mostrarFormulario ? 'close-circle' : 'add-circle'}
                 size={34}
                 color={Colors.primary}
               />
@@ -349,6 +354,10 @@ MaterialClaseScreen({
         {mostrarFormulario && (
 
           <View style={styles.formCard}>
+
+            <Text style={[styles.label, { fontSize: 16, marginBottom: 14, color: Colors.primary }]}>
+              {materialEditando ? 'Editar material' : 'Nuevo material'}
+            </Text>
 
             <Text style={styles.label}>
               Título
@@ -396,48 +405,40 @@ MaterialClaseScreen({
             />
 
 
-            {/* SUBIR ARCHIVO */}
+            {/* SUBIR ARCHIVO — solo al crear (PUT no cambia el archivo) */}
 
-            <TouchableOpacity
-              style={styles.uploadBox}
-              onPress={
-                seleccionarArchivo
-              }
-            >
-
-              <Ionicons
-                name="cloud-upload-outline"
-                size={45}
-                color="#555"
-              />
-
-              <Text
-                style={{
-                  marginTop: 12,
-                  color: '#444'
-                }}
+            {!materialEditando && (
+              <TouchableOpacity
+                style={styles.uploadBox}
+                onPress={seleccionarArchivo}
               >
 
-                {
-                  archivo
-                  ? archivo.name
-                  : 'Subir archivo'
-                }
+                <Ionicons
+                  name="cloud-upload-outline"
+                  size={45}
+                  color="#555"
+                />
 
-              </Text>
+                <Text
+                  style={{
+                    marginTop: 12,
+                    color: '#444'
+                  }}
+                >
+                  {archivo ? archivo.name : 'Subir archivo'}
+                </Text>
 
-            </TouchableOpacity>
+              </TouchableOpacity>
+            )}
 
 
             <TouchableOpacity
               style={styles.btnPublicar}
-              onPress={
-                handlePublicar
-              }
+              onPress={handlePublicar}
             >
 
               <Text style={styles.btnText}>
-                PUBLICAR MATERIAL
+                {materialEditando ? 'GUARDAR CAMBIOS' : 'PUBLICAR MATERIAL'}
               </Text>
 
             </TouchableOpacity>
@@ -533,9 +534,14 @@ MaterialClaseScreen({
 
 
               {esDocente ? (
-                <TouchableOpacity onPress={() => handleDelete(item.id)} style={{ padding: 10 }}>
-                  <Ionicons name="trash-outline" size={24} color={Colors.error} />
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row' }}>
+                  <TouchableOpacity onPress={() => iniciarEdicion(item)} style={{ padding: 8 }}>
+                    <Ionicons name="create-outline" size={24} color={Colors.primary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleDelete(item.id)} style={{ padding: 8 }}>
+                    <Ionicons name="trash-outline" size={24} color={Colors.error} />
+                  </TouchableOpacity>
+                </View>
               ) : (
                 <Ionicons
                   name="chevron-forward"

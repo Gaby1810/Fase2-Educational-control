@@ -7,14 +7,21 @@ import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as DocumentPicker from 'expo-document-picker';
 import { Colors } from '../constants/colors';
-import { post } from '../services/api';
+import { post, put } from '../services/api';
 
 export default function SubirTareaScreen({ route, navigation }) {
   const claseId = route?.params?.claseId;
   const nombreClase = route?.params?.nombreClase || 'la clase';
-  const [titulo, setTitulo] = useState('');
-  const [descripcion, setDescripcion] = useState('');
-  const [fecha, setFecha] = useState(new Date());
+
+  // Si llega una tarea por params → modo edición
+  const tareaEditar = route?.params?.tarea || null;
+  const esEdicion = !!tareaEditar;
+
+  const [titulo, setTitulo] = useState(tareaEditar?.titulo || '');
+  const [descripcion, setDescripcion] = useState(tareaEditar?.instrucciones || '');
+  const [fecha, setFecha] = useState(
+    tareaEditar?.fecha_entrega ? new Date(tareaEditar.fecha_entrega) : new Date()
+  );
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isPublicado, setIsPublicado] = useState(false);
   const [publicando, setPublicando] = useState(false);
@@ -47,7 +54,7 @@ export default function SubirTareaScreen({ route, navigation }) {
   }, [isPublicado]);
 
   const handlePublicar = async () => {
-    if (!claseId) {
+    if (!esEdicion && !claseId) {
       Alert.alert("Clase no encontrada", "Regresa a la clase e intenta crear la tarea nuevamente.");
       return;
     }
@@ -66,24 +73,35 @@ export default function SubirTareaScreen({ route, navigation }) {
     try {
       setPublicando(true);
 
-      const formData = new FormData();
-      formData.append('clase_id', String(claseId));
-      formData.append('titulo', titulo.trim());
-      formData.append('instrucciones', descripcion.trim());
-      formData.append('fecha_entrega', fecha.toISOString().split('T')[0]);
-
-      if (archivo) {
-        formData.append('archivo', {
-          uri: archivo.uri,
-          name: archivo.name,
-          type: archivo.mimeType || 'application/octet-stream'
+      if (esEdicion) {
+        // EDITAR: se envía JSON (no se cambia el archivo aquí)
+        await put(`/tareas/${tareaEditar.id}`, {
+          titulo: titulo.trim(),
+          instrucciones: descripcion.trim(),
+          fecha_entrega: fecha.toISOString().split('T')[0]
         });
+      } else {
+        // CREAR: FormData para poder adjuntar archivo
+        const formData = new FormData();
+        formData.append('clase_id', String(claseId));
+        formData.append('titulo', titulo.trim());
+        formData.append('instrucciones', descripcion.trim());
+        formData.append('fecha_entrega', fecha.toISOString().split('T')[0]);
+
+        if (archivo) {
+          formData.append('archivo', {
+            uri: archivo.uri,
+            name: archivo.name,
+            type: archivo.mimeType || 'application/octet-stream'
+          });
+        }
+
+        await post('/tareas/crear', formData);
       }
 
-      await post('/tareas/crear', formData);
       setIsPublicado(true);
     } catch (error) {
-      Alert.alert("Error", error.message || "No se pudo publicar la tarea.");
+      Alert.alert("Error", error.message || "No se pudo guardar la tarea.");
     } finally {
       setPublicando(false);
     }
@@ -101,7 +119,9 @@ export default function SubirTareaScreen({ route, navigation }) {
           <Ionicons name="close" size={28} color={Colors.onSurface} />
         </TouchableOpacity>
         <View style={{ alignItems: 'center' }}>
-          <Text style={[styles.headerTitle, { color: Colors.onSurface }]}>Nueva Tarea</Text>
+          <Text style={[styles.headerTitle, { color: Colors.onSurface }]}>
+            {esEdicion ? 'Editar Tarea' : 'Nueva Tarea'}
+          </Text>
           <Text style={[styles.headerSub, { color: Colors.onSurfaceVariant }]} numberOfLines={1}>
             {nombreClase}
           </Text>
@@ -138,7 +158,7 @@ export default function SubirTareaScreen({ route, navigation }) {
             mode="date"
             display={Platform.OS === 'ios' ? 'spinner' : 'default'}
             onChange={onChangeFecha}
-            minimumDate={new Date()}
+            minimumDate={esEdicion ? undefined : new Date()}
           />
         )}
 
@@ -154,6 +174,7 @@ export default function SubirTareaScreen({ route, navigation }) {
           />
         </View>
 
+        {!esEdicion && (
         <View style={styles.inputGroup}>
           <Text style={[styles.label, { color: Colors.primary }]}>Archivo adjunto (opcional)</Text>
 
@@ -188,6 +209,7 @@ export default function SubirTareaScreen({ route, navigation }) {
             </View>
           )}
         </View>
+        )}
 
         <TouchableOpacity
           style={[styles.btnPrimary, { backgroundColor: Colors.primary, opacity: publicando ? 0.65 : 1 }]}
@@ -195,7 +217,9 @@ export default function SubirTareaScreen({ route, navigation }) {
           disabled={publicando}
         >
           <Text style={[styles.btnText, { color: Colors.onPrimary }]}>
-            {publicando ? 'PUBLICANDO...' : 'PUBLICAR TAREA'}
+            {publicando
+              ? (esEdicion ? 'GUARDANDO...' : 'PUBLICANDO...')
+              : (esEdicion ? 'GUARDAR CAMBIOS' : 'PUBLICAR TAREA')}
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -205,8 +229,12 @@ export default function SubirTareaScreen({ route, navigation }) {
         <View style={[styles.successToast, { backgroundColor: Colors.surfaceContainerHighest }]}>
           <MaterialCommunityIcons name="check-circle" size={28} color="#4CAF50" />
           <View style={{ marginLeft: 12, flex: 1 }}>
-            <Text style={[styles.successTitle, { color: Colors.onSurface }]}>¡Publicado!</Text>
-            <Text style={{ color: Colors.onSurfaceVariant, fontSize: 12 }}>La tarea ya está disponible.</Text>
+            <Text style={[styles.successTitle, { color: Colors.onSurface }]}>
+              {esEdicion ? '¡Actualizada!' : '¡Publicado!'}
+            </Text>
+            <Text style={{ color: Colors.onSurfaceVariant, fontSize: 12 }}>
+              {esEdicion ? 'Los cambios se guardaron.' : 'La tarea ya está disponible.'}
+            </Text>
           </View>
         </View>
       )}

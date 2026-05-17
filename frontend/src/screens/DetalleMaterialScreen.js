@@ -4,11 +4,11 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   Linking,
   ScrollView
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   Ionicons
@@ -34,11 +34,12 @@ DetalleMaterialScreen({
         style={{
           flex: 1,
           justifyContent: 'center',
-          alignItems: 'center'
+          alignItems: 'center',
+          backgroundColor: Colors.background
         }}
       >
 
-        <Text>
+        <Text style={{ color: Colors.onSurface }}>
           Material no encontrado
         </Text>
 

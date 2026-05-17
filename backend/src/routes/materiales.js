@@ -146,20 +146,66 @@ router.post('/', auth, requireRole('docente', 'administrador'), aceptarArchivo, 
 router.post('/subir', auth, requireRole('docente', 'administrador'), aceptarArchivo, crearMaterialHandler);
 
 // =====================
+// EDITAR MATERIAL (Docente dueño / Admin)
+// PUT /api/materiales/:id
+// =====================
+router.put('/:id', auth, requireRole('docente', 'administrador'), (req, res) => {
+
+    const { id } = req.params;
+    const { titulo, descripcion } = req.body;
+    const { id: usuarioId, rol } = req.usuario;
+
+    if (!titulo) {
+        return res.status(400).json({ error: "El título es obligatorio" });
+    }
+
+    const sqlVerify = `
+        SELECT m.id, c.docente_id
+        FROM materiales m
+        INNER JOIN clases c ON c.id = m.clase_id
+        WHERE m.id = ?
+    `;
+
+    db.query(sqlVerify, [id], (err, rows) => {
+        if (err) return res.status(500).json({ error: "Error validando permiso" });
+        if (rows.length === 0) return res.status(404).json({ error: "Material no encontrado" });
+
+        if (rol !== 'administrador' && rows[0].docente_id !== usuarioId) {
+            return res.status(403).json({ error: "No puedes editar este material" });
+        }
+
+        db.query(
+            "UPDATE materiales SET titulo = ?, descripcion = ? WHERE id = ?",
+            [titulo, descripcion || null, id],
+            (err2) => {
+                if (err2) {
+                    console.log(err2);
+                    return res.status(500).json({ error: "Error al actualizar material" });
+                }
+                res.json({ ok: true, mensaje: "Material actualizado correctamente" });
+            }
+        );
+    });
+});
+
+
+// =====================
 // ELIMINAR MATERIAL
 // =====================
 router.delete('/:id', auth, requireRole('docente', 'administrador'), (req, res) => {
     const { id } = req.params;
-    const docenteId = req.usuario.id;
+    const { id: usuarioId, rol } = req.usuario;
 
-    const sqlVerify = `
-        SELECT m.id, m.archivo
-        FROM materiales m
-        INNER JOIN clases c ON c.id = m.clase_id
-        WHERE m.id = ? AND c.docente_id = ?
-    `;
+    // Admin: cualquier material. Docente: solo los de sus clases.
+    const sqlVerify = rol === 'administrador'
+        ? `SELECT m.id, m.archivo FROM materiales m WHERE m.id = ?`
+        : `SELECT m.id, m.archivo
+           FROM materiales m
+           INNER JOIN clases c ON c.id = m.clase_id
+           WHERE m.id = ? AND c.docente_id = ?`;
+    const verifParams = rol === 'administrador' ? [id] : [id, usuarioId];
 
-    db.query(sqlVerify, [id, docenteId], (err, rows) => {
+    db.query(sqlVerify, verifParams, (err, rows) => {
         if (err) return res.status(500).json({ error: "Error validando permiso" });
         if (rows.length === 0) return res.status(403).json({ error: "No tienes permiso para eliminar este material" });
 

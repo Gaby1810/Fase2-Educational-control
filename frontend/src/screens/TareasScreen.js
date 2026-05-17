@@ -392,7 +392,19 @@ export default function TareasScreen({
               </View>
 
               {esDocente && (
-                <TouchableOpacity onPress={() => handleEliminar(item.id)} style={{ marginLeft: 10, padding: 5 }}>
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('SubirTarea', {
+                    tarea: item,
+                    nombreClase: item.materia || nombreClase
+                  })}
+                  style={{ marginLeft: 6, padding: 5 }}
+                >
+                  <Ionicons name="create-outline" size={22} color={Colors.primary} />
+                </TouchableOpacity>
+              )}
+
+              {esDocente && (
+                <TouchableOpacity onPress={() => handleEliminar(item.id)} style={{ marginLeft: 2, padding: 5 }}>
                   <Ionicons name="trash-outline" size={22} color={Colors.error} />
                 </TouchableOpacity>
               )}

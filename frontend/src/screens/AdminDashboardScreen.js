@@ -3,7 +3,7 @@
 // Dashboard principal del Administrador
 // ===============================
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -16,8 +16,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { get } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import useFetch from '../hooks/useFetch';
 
 import { Colors } from '../constants/colors';
 
@@ -28,28 +28,14 @@ import { Colors } from '../constants/colors';
 export default function AdminDashboardScreen({ navigation }) {
 
   const { logout, usuario } = useAuth();
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
 
-  const cargarStats = useCallback(async () => {
-    try {
-      const data = await get('/admin/stats');
-      setStats(data);
-    } catch (e) {
-      Alert.alert('Error', e.message || 'No se pudieron cargar los datos');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => { cargarStats(); }, [cargarStats]);
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    cargarStats();
-  };
+  // Carga de estadísticas mediante el hook reutilizable
+  const {
+    data: stats,
+    loading,
+    refreshing,
+    refresh: onRefresh,
+  } = useFetch('/admin/stats');
 
   const handleLogout = () => {
     Alert.alert(
@@ -61,8 +47,8 @@ export default function AdminDashboardScreen({ navigation }) {
           text: 'Sí, salir',
           style: 'destructive',
           onPress: async () => {
+            // Al cerrar sesión, el AppNavigator vuelve solo al stack público
             await logout();
-            navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
           },
         },
       ]
@@ -76,7 +62,7 @@ export default function AdminDashboardScreen({ navigation }) {
           label: 'Reportes',
           value: null,
           icon: 'bar-chart',
-          color: Colors.surfaceContainerHighest,
+          color: Colors.surfaceContainerLow,
           iconColor: Colors.primary,
           onPress: () => navigation.navigate('AdminReportes'),
         },
@@ -84,24 +70,24 @@ export default function AdminDashboardScreen({ navigation }) {
           label: 'Total de docentes',
           value: stats.totalDocentes,
           icon: 'school',
-          color: '#E0FAF5',
-          iconColor: '#00897B',
+          color: Colors.surfaceContainerLow,
+          iconColor: Colors.secondary,
           onPress: () => navigation.navigate('AdminUsuarios', { filtroInicial: 'docente' }),
         },
         {
           label: 'Total de estudiantes',
           value: stats.totalEstudiantes,
           icon: 'people',
-          color: '#FFEDE8',
-          iconColor: '#E64A19',
+          color: Colors.surfaceContainerLow,
+          iconColor: Colors.tertiary,
           onPress: () => navigation.navigate('AdminUsuarios', { filtroInicial: 'estudiante' }),
         },
         {
           label: 'Total de clases',
           value: stats.totalClases,
           icon: 'book',
-          color: '#FFF8E1',
-          iconColor: '#F57F17',
+          color: Colors.surfaceContainerLow,
+          iconColor: Colors.primary,
           onPress: () => navigation.navigate('AdminClases'),
         },
       ]
@@ -110,11 +96,11 @@ export default function AdminDashboardScreen({ navigation }) {
   // Icono por tipo de actividad
   const iconoActividad = (tipo, subtipo) => {
     if (tipo === 'usuario_creado') {
-      if (subtipo === 'docente')       return { name: 'person-add', color: '#00897B' };
+      if (subtipo === 'docente')       return { name: 'person-add', color: Colors.secondary };
       if (subtipo === 'administrador') return { name: 'shield',     color: Colors.primary };
-      return { name: 'person-add', color: '#E64A19' };
+      return { name: 'person-add', color: Colors.tertiary };
     }
-    return { name: 'add-circle', color: '#888' };
+    return { name: 'add-circle', color: Colors.onSurfaceVariant };
   };
 
   const labelActividad = (item) => {
@@ -217,7 +203,7 @@ export default function AdminDashboardScreen({ navigation }) {
       </ScrollView>
 
       {/* BOTTOM NAV */}
-      <View style={[styles.bottomNav, { backgroundColor: Colors.surfaceContainerLowest, borderColor: Colors.outlineVariant }]}>
+      <View style={[styles.bottomNav, { backgroundColor: Colors.surfaceContainerHighest, borderColor: Colors.outlineVariant }]}>
         <NavItem icon="home" label="Inicio" active onPress={() => {}} />
         <NavItem icon="book-outline" label="Clases" onPress={() => navigation.navigate('AdminClases')} />
         <NavItem icon="people-outline" label="Usuarios" onPress={() => navigation.navigate('AdminUsuarios')} />
@@ -277,20 +263,20 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   sectionTitle:  { fontSize: 17, fontWeight: '700', color: '#111' },
   verTodo:       { fontSize: 12, color: Colors.primary, fontWeight: '600' },
-  emptyText:     { color: '#999', textAlign: 'center', marginTop: 10 },
+  emptyText:     { color: Colors.onSurfaceVariant, textAlign: 'center', marginTop: 10 },
 
   actItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderColor: '#eee',
+    borderColor: Colors.outlineVariant,
   },
   actIcon:    { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   actContent: { flex: 1 },
-  actTitle:   { fontSize: 14, fontWeight: '600', color: '#111' },
-  actSub:     { fontSize: 12, color: '#777', marginTop: 2 },
-  actTime:    { fontSize: 11, color: '#aaa', marginLeft: 8 },
+  actTitle:   { fontSize: 14, fontWeight: '600', color: Colors.onSurface },
+  actSub:     { fontSize: 12, color: Colors.onSurfaceVariant, marginTop: 2 },
+  actTime:    { fontSize: 11, color: Colors.onSurfaceVariant, marginLeft: 8 },
 
   bottomNav: {
     height: 70,

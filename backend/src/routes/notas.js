@@ -130,9 +130,10 @@ router.post('/guardar', auth, requireRole('docente', 'administrador'), (req, res
         });
     }
 
-    if (calificacion < 0 || calificacion > 100) {
+    const nota = Number(calificacion);
+    if (isNaN(nota) || nota < 0 || nota > 10) {
         return res.status(400).json({
-            error: "La calificación debe estar entre 0 y 100"
+            error: "La calificación debe estar entre 0 y 10"
         });
     }
 
@@ -144,7 +145,7 @@ router.post('/guardar', auth, requireRole('docente', 'administrador'), (req, res
 
     db.query(
         sql,
-        [calificacion, evaluacion || null, clase_id, estudiante_id],
+        [nota, evaluacion || null, clase_id, estudiante_id],
         (err, result) => {
 
             if (err) {
