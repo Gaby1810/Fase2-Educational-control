@@ -521,6 +521,8 @@ MaterialClaseScreen({
 
                   <Text
                     style={styles.cardDesc}
+                    numberOfLines={3}
+                    ellipsizeMode="tail"
                   >
                     {item.descripcion}
                   </Text>

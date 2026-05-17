@@ -91,7 +91,7 @@ export default function SelectInput({
         >
           <Pressable
             style={[styles.modalCard, { backgroundColor: Colors.surfaceContainerHigh }]}
-            onPress={() => {}} // bloquea propagación
+            onPress={() => { }} // bloquea propagación
           >
 
             <View style={styles.modalHeader}>

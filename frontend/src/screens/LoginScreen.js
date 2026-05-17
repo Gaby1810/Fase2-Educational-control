@@ -27,37 +27,37 @@ export default function LoginScreen({ navigation }) {
   const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
 
-const handleLogin = async () => {
+  const handleLogin = async () => {
 
-  if (!email || !password) {
-    Alert.alert("Atención", "Ingresa correo y contraseña");
-    return;
-  }
+    if (!email || !password) {
+      Alert.alert("Atención", "Ingresa correo y contraseña");
+      return;
+    }
 
-  try {
+    try {
 
-    const res = await post("/auth/login", {
-      correo: email,
-      password: password
-    });
+      const res = await post("/auth/login", {
+        correo: email,
+        password: password
+      });
 
-    await login(res.token, res.usuario);
+      await login(res.token, res.usuario);
 
-    // Estudiante → directo a sus clases (estilo Classroom)
-    // Docente   → al panel
-    const { rol } = res.usuario;
-    const destino =
-      rol === 'estudiante'    ? 'ClasesList'     :
-      rol === 'administrador' ? 'AdminDashboard' :
-      'Dashboard';
-    navigation.reset({ index: 0, routes: [{ name: destino }] });
+      // Estudiante → directo a sus clases (estilo Classroom)
+      // Docente   → al panel
+      const { rol } = res.usuario;
+      const destino =
+        rol === 'estudiante' ? 'ClasesList' :
+          rol === 'administrador' ? 'AdminDashboard' :
+            'Dashboard';
+      navigation.reset({ index: 0, routes: [{ name: destino }] });
 
-  } catch (error) {
+    } catch (error) {
 
-    Alert.alert("Error", error.message);
+      Alert.alert("Error", error.message);
 
-  }
-};
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -70,7 +70,7 @@ const handleLogin = async () => {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.keyboardView}
         >
-          <ScrollView 
+          <ScrollView
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
@@ -106,11 +106,11 @@ const handleLogin = async () => {
                 <View style={styles.inputGroup}>
                   <Text style={styles.label}>Correo electrónico</Text>
                   <View style={styles.inputWrapper}>
-                    <MaterialCommunityIcons 
-                      name="email-outline" 
-                      size={20} 
-                      color={Colors.onSurfaceVariant} 
-                      style={styles.inputIcon} 
+                    <MaterialCommunityIcons
+                      name="email-outline"
+                      size={20}
+                      color={Colors.onSurfaceVariant}
+                      style={styles.inputIcon}
                     />
                     <TextInput
                       style={styles.input}
@@ -128,11 +128,11 @@ const handleLogin = async () => {
                 <View style={styles.inputGroup}>
                   <Text style={styles.label}>Contraseña</Text>
                   <View style={styles.inputWrapper}>
-                    <MaterialCommunityIcons 
-                      name="lock-outline" 
-                      size={20} 
-                      color={Colors.onSurfaceVariant} 
-                      style={styles.inputIcon} 
+                    <MaterialCommunityIcons
+                      name="lock-outline"
+                      size={20}
+                      color={Colors.onSurfaceVariant}
+                      style={styles.inputIcon}
                     />
                     <TextInput
                       style={[styles.input, { paddingRight: 50 }]}
@@ -142,14 +142,14 @@ const handleLogin = async () => {
                       value={password}
                       onChangeText={setPassword}
                     />
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.visibilityIcon}
                       onPress={() => setShowPassword(!showPassword)}
                     >
-                      <MaterialCommunityIcons 
-                        name={showPassword ? "eye-off-outline" : "eye-outline"} 
-                        size={20} 
-                        color={Colors.onSurfaceVariant} 
+                      <MaterialCommunityIcons
+                        name={showPassword ? "eye-off-outline" : "eye-outline"}
+                        size={20}
+                        color={Colors.onSurfaceVariant}
                       />
                     </TouchableOpacity>
                   </View>

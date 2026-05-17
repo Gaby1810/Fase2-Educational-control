@@ -34,6 +34,8 @@ export default function NotasScreen({ route, navigation }) {
 
   const [modalVisible, setModalVisible] = useState(false);
   const [estudiantes, setEstudiantes] = useState([]);
+  const [tareasClase, setTareasClase] = useState([]);
+  const [busquedaEstudiante, setBusquedaEstudiante] = useState('');
   const [formNota, setFormNota] = useState({ estudiante_id: '', evaluacion: '', calificacion: '' });
 
   useEffect(() => {
@@ -71,14 +73,21 @@ export default function NotasScreen({ route, navigation }) {
 
   const abrirModal = async () => {
     try {
-      const data = await get(`/clases/${claseId}/estudiantes`);
-      setEstudiantes(data || []);
+      const [dataEstudiantes, dataTareas] = await Promise.all([
+        get(`/clases/${claseId}/estudiantes`),
+        get(`/tareas/clase/${claseId}`)
+      ]);
+      setEstudiantes(dataEstudiantes || []);
+      setTareasClase(dataTareas || []);
+      setBusquedaEstudiante('');
       setFormNota({ estudiante_id: '', evaluacion: '', calificacion: '' });
       setModalVisible(true);
     } catch (e) {
-      Alert.alert("Error", "No se pudieron cargar los estudiantes");
+      Alert.alert("Error", "No se pudieron cargar los datos");
     }
   };
+
+  const estudiantesFiltrados = estudiantes.filter(e => e.nombre?.toLowerCase().includes(busquedaEstudiante.toLowerCase()));
 
   const guardarNota = async () => {
     if (!formNota.estudiante_id || !formNota.evaluacion || !formNota.calificacion) {
@@ -354,8 +363,16 @@ export default function NotasScreen({ route, navigation }) {
           <View style={[styles.modalContent, { backgroundColor: Colors.surfaceContainerLow }]}>
             <Text style={[styles.modalTitle, { color: Colors.onSurface }]}>Registrar Nota</Text>
 
+            <Text style={{color: Colors.onSurfaceVariant, fontSize: 12, marginBottom: 5, marginTop: 10}}>Selecciona un Estudiante:</Text>
+            <TextInput
+              style={[styles.inputModal, { color: Colors.onSurface, borderColor: Colors.outline, marginBottom: 5, paddingVertical: 6 }]}
+              placeholder="Buscar estudiante..."
+              placeholderTextColor={Colors.onSurfaceVariant}
+              value={busquedaEstudiante}
+              onChangeText={setBusquedaEstudiante}
+            />
             <ScrollView style={{maxHeight: 120, marginBottom: 10}}>
-              {estudiantes.map(est => (
+              {estudiantesFiltrados.map(est => (
                 <TouchableOpacity
                   key={est.id}
                   style={[styles.estudianteRow, formNota.estudiante_id === est.id && { backgroundColor: Colors.primaryContainer }]}
@@ -368,13 +385,24 @@ export default function NotasScreen({ route, navigation }) {
               ))}
             </ScrollView>
 
-            <TextInput
-              style={[styles.inputModal, { color: Colors.onSurface, borderColor: Colors.outline }]}
-              placeholder="Evaluación (Ej. Examen final)"
-              placeholderTextColor={Colors.onSurfaceVariant}
-              value={formNota.evaluacion}
-              onChangeText={(text) => setFormNota({ ...formNota, evaluacion: text })}
-            />
+            <Text style={{color: Colors.onSurfaceVariant, fontSize: 12, marginBottom: 5}}>Selecciona la Evaluación (Tarea):</Text>
+            <ScrollView style={{maxHeight: 100, marginBottom: 15}}>
+              {tareasClase.length === 0 && (
+                <Text style={{color: Colors.onSurfaceVariant, fontStyle: 'italic', fontSize: 12}}>No hay tareas asignadas en esta clase.</Text>
+              )}
+              {tareasClase.map(tarea => (
+                <TouchableOpacity
+                  key={tarea.id}
+                  style={[styles.estudianteRow, formNota.evaluacion === tarea.titulo && { backgroundColor: Colors.tertiaryContainer }]}
+                  onPress={() => setFormNota({ ...formNota, evaluacion: tarea.titulo })}
+                >
+                  <Text style={{ color: formNota.evaluacion === tarea.titulo ? Colors.onTertiaryContainer : Colors.onSurface }}>
+                    {tarea.titulo}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
             <TextInput
               style={[styles.inputModal, { color: Colors.onSurface, borderColor: Colors.outline }]}
               placeholder="Calificación (0-100)"

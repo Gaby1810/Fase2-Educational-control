@@ -84,32 +84,34 @@ export default function DashboardScreen({ navigation }) {
 
     <SafeAreaView style={styles.container}>
 
-      {/* HEADER */}
-      <View style={styles.header}>
+      {/* HEADER (Solo docente) */}
+      {esDocente && (
+        <View style={styles.header}>
 
-        <TouchableOpacity
-          style={styles.headerBtn}
-          onPress={() => navigation.goBack()}
-        >
-          <MaterialCommunityIcons
-            name="chevron-left"
-            size={28}
-            color="#fff"
-          />
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.headerBtn}
+            onPress={() => navigation.goBack()}
+          >
+            <MaterialCommunityIcons
+              name="chevron-left"
+              size={28}
+              color="#fff"
+            />
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.headerBtn}
-          onPress={handleLogout}
-        >
-          <MaterialCommunityIcons
-            name="logout"
-            size={22}
-            color="#fff"
-          />
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.headerBtn}
+            onPress={handleLogout}
+          >
+            <MaterialCommunityIcons
+              name="logout"
+              size={22}
+              color="#fff"
+            />
+          </TouchableOpacity>
 
-      </View>
+        </View>
+      )}
 
 
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -230,7 +232,7 @@ export default function DashboardScreen({ navigation }) {
             size={24}
             color="#777"
           />
-          <Text style={styles.navText}>Salir</Text>
+          <Text style={styles.navText}>Cerrar sesión</Text>
         </TouchableOpacity>
 
       </View>

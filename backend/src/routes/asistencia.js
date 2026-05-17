@@ -10,55 +10,104 @@ const mapaEstados = { P: 'presente', A: 'ausente', T: 'tarde' };
 // REPORTE ANUAL DE ASISTENCIA (estudiante)
 // GET /api/asistencia/reporte-anual?anio=2026
 // =====================
-router.get('/reporte-anual', auth, requireRole('estudiante'), (req, res) => {
+router.get('/reporte-anual', auth, requireRole('estudiante', 'docente', 'administrador'), (req, res) => {
 
-    const estudianteId = req.usuario.id;
+    const usuarioId = req.usuario.id;
+    const rol = req.usuario.rol;
     const anio = Number(req.query.anio) || new Date().getFullYear();
 
-    const materiasSql = `
-        SELECT
-            c.id AS clase_id,
-            c.nombre AS materia,
-            c.grado,
-            c.seccion,
-            COUNT(a.id) AS total,
-            SUM(CASE WHEN a.estado = 'presente' THEN 1 ELSE 0 END) AS presentes,
-            SUM(CASE WHEN a.estado = 'ausente' THEN 1 ELSE 0 END) AS ausentes,
-            SUM(CASE WHEN a.estado = 'tarde' THEN 1 ELSE 0 END) AS tardes
-        FROM inscripciones i
-        INNER JOIN clases c ON c.id = i.clase_id
-        LEFT JOIN asistencia a
-            ON a.clase_id = c.id
-            AND a.estudiante_id = i.estudiante_id
-            AND YEAR(a.fecha) = ?
-        WHERE i.estudiante_id = ?
-        GROUP BY c.id, c.nombre, c.grado, c.seccion
-        ORDER BY c.nombre ASC
-    `;
+    let materiasSql, mesesSql, paramsMaterias, paramsMeses;
 
-    const mesesSql = `
-        SELECT
-            MONTH(a.fecha) AS mes,
-            COUNT(a.id) AS total,
-            SUM(CASE WHEN a.estado = 'presente' THEN 1 ELSE 0 END) AS presentes,
-            SUM(CASE WHEN a.estado = 'ausente' THEN 1 ELSE 0 END) AS ausentes,
-            SUM(CASE WHEN a.estado = 'tarde' THEN 1 ELSE 0 END) AS tardes
-        FROM asistencia a
-        INNER JOIN inscripciones i
-            ON i.clase_id = a.clase_id
-            AND i.estudiante_id = a.estudiante_id
-        WHERE a.estudiante_id = ? AND YEAR(a.fecha) = ?
-        GROUP BY MONTH(a.fecha)
-        ORDER BY mes ASC
-    `;
+    if (rol === 'estudiante') {
+        materiasSql = `
+            SELECT c.id AS clase_id, c.nombre AS materia, c.grado, c.seccion,
+                COUNT(a.id) AS total,
+                SUM(CASE WHEN a.estado = 'presente' THEN 1 ELSE 0 END) AS presentes,
+                SUM(CASE WHEN a.estado = 'ausente' THEN 1 ELSE 0 END) AS ausentes,
+                SUM(CASE WHEN a.estado = 'tarde' THEN 1 ELSE 0 END) AS tardes
+            FROM inscripciones i
+            INNER JOIN clases c ON c.id = i.clase_id
+            LEFT JOIN asistencia a ON a.clase_id = c.id AND a.estudiante_id = i.estudiante_id AND YEAR(a.fecha) = ?
+            WHERE i.estudiante_id = ?
+            GROUP BY c.id, c.nombre, c.grado, c.seccion
+            ORDER BY c.nombre ASC
+        `;
+        paramsMaterias = [anio, usuarioId];
 
-    db.query(materiasSql, [anio, estudianteId], (err, materias) => {
+        mesesSql = `
+            SELECT MONTH(a.fecha) AS mes, COUNT(a.id) AS total,
+                SUM(CASE WHEN a.estado = 'presente' THEN 1 ELSE 0 END) AS presentes,
+                SUM(CASE WHEN a.estado = 'ausente' THEN 1 ELSE 0 END) AS ausentes,
+                SUM(CASE WHEN a.estado = 'tarde' THEN 1 ELSE 0 END) AS tardes
+            FROM asistencia a
+            INNER JOIN inscripciones i ON i.clase_id = a.clase_id AND i.estudiante_id = a.estudiante_id
+            WHERE a.estudiante_id = ? AND YEAR(a.fecha) = ?
+            GROUP BY MONTH(a.fecha)
+            ORDER BY mes ASC
+        `;
+        paramsMeses = [usuarioId, anio];
+    } else if (rol === 'docente') {
+        materiasSql = `
+            SELECT c.id AS clase_id, c.nombre AS materia, c.grado, c.seccion,
+                COUNT(a.id) AS total,
+                SUM(CASE WHEN a.estado = 'presente' THEN 1 ELSE 0 END) AS presentes,
+                SUM(CASE WHEN a.estado = 'ausente' THEN 1 ELSE 0 END) AS ausentes,
+                SUM(CASE WHEN a.estado = 'tarde' THEN 1 ELSE 0 END) AS tardes
+            FROM clases c
+            LEFT JOIN asistencia a ON a.clase_id = c.id AND YEAR(a.fecha) = ?
+            WHERE c.docente_id = ?
+            GROUP BY c.id, c.nombre, c.grado, c.seccion
+            ORDER BY c.nombre ASC
+        `;
+        paramsMaterias = [anio, usuarioId];
+
+        mesesSql = `
+            SELECT MONTH(a.fecha) AS mes, COUNT(a.id) AS total,
+                SUM(CASE WHEN a.estado = 'presente' THEN 1 ELSE 0 END) AS presentes,
+                SUM(CASE WHEN a.estado = 'ausente' THEN 1 ELSE 0 END) AS ausentes,
+                SUM(CASE WHEN a.estado = 'tarde' THEN 1 ELSE 0 END) AS tardes
+            FROM asistencia a
+            INNER JOIN clases c ON c.id = a.clase_id
+            WHERE c.docente_id = ? AND YEAR(a.fecha) = ?
+            GROUP BY MONTH(a.fecha)
+            ORDER BY mes ASC
+        `;
+        paramsMeses = [usuarioId, anio];
+    } else {
+        // Administrador: todas las clases
+        materiasSql = `
+            SELECT c.id AS clase_id, c.nombre AS materia, c.grado, c.seccion,
+                COUNT(a.id) AS total,
+                SUM(CASE WHEN a.estado = 'presente' THEN 1 ELSE 0 END) AS presentes,
+                SUM(CASE WHEN a.estado = 'ausente' THEN 1 ELSE 0 END) AS ausentes,
+                SUM(CASE WHEN a.estado = 'tarde' THEN 1 ELSE 0 END) AS tardes
+            FROM clases c
+            LEFT JOIN asistencia a ON a.clase_id = c.id AND YEAR(a.fecha) = ?
+            GROUP BY c.id, c.nombre, c.grado, c.seccion
+            ORDER BY c.nombre ASC
+        `;
+        paramsMaterias = [anio];
+
+        mesesSql = `
+            SELECT MONTH(a.fecha) AS mes, COUNT(a.id) AS total,
+                SUM(CASE WHEN a.estado = 'presente' THEN 1 ELSE 0 END) AS presentes,
+                SUM(CASE WHEN a.estado = 'ausente' THEN 1 ELSE 0 END) AS ausentes,
+                SUM(CASE WHEN a.estado = 'tarde' THEN 1 ELSE 0 END) AS tardes
+            FROM asistencia a
+            WHERE YEAR(a.fecha) = ?
+            GROUP BY MONTH(a.fecha)
+            ORDER BY mes ASC
+        `;
+        paramsMeses = [anio];
+    }
+
+    db.query(materiasSql, paramsMaterias, (err, materias) => {
         if (err) {
             console.log(err);
             return res.status(500).json({ error: "Error al obtener reporte anual" });
         }
 
-        db.query(mesesSql, [estudianteId, anio], (err, meses) => {
+        db.query(mesesSql, paramsMeses, (err, meses) => {
             if (err) {
                 console.log(err);
                 return res.status(500).json({ error: "Error al obtener reporte mensual" });

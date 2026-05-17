@@ -246,14 +246,20 @@ export default function DetalleClaseScreen({ navigation, route }) {
               <Ionicons name="trash-outline" size={22} color={Colors.error} />
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity onPress={handleAbandonar} style={[styles.headerBtn, { backgroundColor: Colors.surfaceContainerLow }]}>
-              <Ionicons name="exit-outline" size={22} color={Colors.error} />
-            </TouchableOpacity>
+            <View style={{ width: 40 }} />
           )}
 
         </View>
 
       </SafeAreaView>
+
+      {!esDocente && (
+        <View style={{ backgroundColor: Colors.error + '22', padding: 10, alignItems: 'center' }}>
+          <Text style={{ color: Colors.error, fontSize: 12, textAlign: 'center', fontWeight: 'bold' }}>
+            Solo el maestro lo puede sacar de la clase al final del año escolar
+          </Text>
+        </View>
+      )}
 
 
       <ScrollView contentContainerStyle={{ padding: 20 }}>

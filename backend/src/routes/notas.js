@@ -139,6 +139,7 @@ router.post('/guardar', auth, requireRole('docente', 'administrador'), (req, res
     const sql = `
         INSERT INTO notas (calificacion, evaluacion, clase_id, estudiante_id)
         VALUES (?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE calificacion = VALUES(calificacion)
     `;
 
     db.query(

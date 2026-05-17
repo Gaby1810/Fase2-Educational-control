@@ -71,9 +71,9 @@ export default function AnimatedBackground({ intensity = 'normal' }) {
 
   // Intensidad
   const opacities = {
-    soft:   { o1: 0.18, o2: 0.14, o3: 0.12, sh: 0.04 },
+    soft: { o1: 0.18, o2: 0.14, o3: 0.12, sh: 0.04 },
     normal: { o1: 0.28, o2: 0.22, o3: 0.20, sh: 0.06 },
-    vivid:  { o1: 0.40, o2: 0.32, o3: 0.28, sh: 0.10 }
+    vivid: { o1: 0.40, o2: 0.32, o3: 0.28, sh: 0.10 }
   }[intensity] || { o1: 0.28, o2: 0.22, o3: 0.20, sh: 0.06 };
 
   // Orbe 1 — esquina superior izquierda, color primario
