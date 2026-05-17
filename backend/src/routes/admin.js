@@ -111,25 +111,47 @@ router.get('/usuarios', (req, res) => {
 // Editar nombre, correo y rol de un usuario
 // =====================
 router.put('/usuarios/:id', (req, res) => {
-
+ 
     const { id } = req.params;
     const { nombre, correo, rol } = req.body;
-
+ 
     if (!nombre && !correo && !rol) {
         return res.status(400).json({ error: 'Nada que actualizar' });
     }
-
+ 
+    // Si viene correo, verificar que no esté en uso por otro usuario
+    if (correo) {
+        db.query(
+            'SELECT id FROM usuarios WHERE correo = ? AND id != ?',
+            [correo, id],
+            (errCheck, rows) => {
+                if (errCheck) {
+                    console.error(errCheck);
+                    return res.status(500).json({ error: 'Error al validar correo' });
+                }
+                if (rows.length > 0) {
+                    return res.status(409).json({ error: 'El correo ya está en uso' });
+                }
+                ejecutarUpdate(id, nombre, correo, rol, res);
+            }
+        );
+    } else {
+        ejecutarUpdate(id, nombre, correo, rol, res);
+    }
+});
+ 
+function ejecutarUpdate(id, nombre, correo, rol, res) {
     const fields = [];
     const params = [];
-
+ 
     if (nombre) { fields.push('nombre = ?'); params.push(nombre); }
     if (correo) { fields.push('correo = ?'); params.push(correo); }
     if (rol)    { fields.push('rol = ?');    params.push(rol); }
-
+ 
     params.push(id);
-
+ 
     const sql = `UPDATE usuarios SET ${fields.join(', ')} WHERE id = ?`;
-
+ 
     db.query(sql, params, (err, result) => {
         if (err) {
             console.error(err);
@@ -140,7 +162,7 @@ router.put('/usuarios/:id', (req, res) => {
         }
         res.json({ mensaje: 'Usuario actualizado correctamente' });
     });
-});
+}
 
 
 // =====================
