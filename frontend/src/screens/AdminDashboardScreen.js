@@ -126,9 +126,7 @@ export default function AdminDashboardScreen({ navigation }) {
         <TouchableOpacity style={styles.headerBtn} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={22} color={Colors.primary} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.headerBtn}>
-          <Ionicons name="notifications-outline" size={22} color={Colors.primary} />
-        </TouchableOpacity>
+       
       </View>
 
       <ScrollView
