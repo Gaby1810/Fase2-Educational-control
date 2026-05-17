@@ -67,9 +67,12 @@ const request = async (endpoint, options = {}) => {
     return data;
 
   } catch (error) {
-    console.error("API Error:", error.message);
-    throw error;
+  if (error.message === 'Network request failed') {
+    throw new Error('No hay conexión a internet');
   }
+  console.error("API Error:", error.message);
+  throw error;
+}
 };
 
 // =====================
