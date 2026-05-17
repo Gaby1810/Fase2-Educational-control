@@ -148,8 +148,11 @@ router.put('/usuarios/:id', (req, res) => {
 // Eliminar un usuario
 // =====================
 router.delete('/usuarios/:id', (req, res) => {
+    const id = Number(req.params.id);
 
-    const { id } = req.params;
+    if (id === req.usuario.id) {
+        return res.status(403).json({ error: 'No puedes eliminar tu propia cuenta' });
+    }
 
     db.query('DELETE FROM usuarios WHERE id = ?', [id], (err, result) => {
         if (err) {
