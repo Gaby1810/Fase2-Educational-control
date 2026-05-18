@@ -10,6 +10,9 @@
     },
     "preview": {
       "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://fase2-educational-control-production.up.railway.app/api"
+      },
       "android": {
         "buildType": "apk"
       }

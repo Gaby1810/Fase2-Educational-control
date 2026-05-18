@@ -38,6 +38,7 @@
       ]
     ],
     "extra": {
+      "apiUrl": "https://fase2-educational-control-production.up.railway.app/api",
       "eas": {
         "projectId": "dbebce6a-da6e-42ac-b1eb-b74d5378a175"
       }
