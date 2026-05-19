@@ -48,7 +48,7 @@ if (GMAIL_USER && GMAIL_APP_PASSWORD) {
     remitente = `${APP_NAME} <${GMAIL_USER}>`;
     modo = 'GMAIL';
 
-    console.log(`📧 Email: Gmail SMTP listo (${GMAIL_USER})`);
+    console.log(`📧 Email: Gmail SMTP listo (${GMAIL_USER}) [IPv4 family:4, puerto 465]`);
 
 } else if (RESEND_API_KEY) {
 

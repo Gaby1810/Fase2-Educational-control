@@ -64,4 +64,5 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🔥 Servidor corriendo en puerto ${PORT}`);
+    console.log(`📦 Build: SMTP-IPv4-fix | dns=ipv4first | ${new Date().toISOString()}`);
 });
