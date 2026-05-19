@@ -1,0 +1,4 @@
+module.exports = {
+    isDevice: true,
+    deviceName: 'Test Device',
+};

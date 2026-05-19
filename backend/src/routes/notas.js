@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../db');
 const auth = require('../middleware/auth');
 const requireRole = require('../middleware/requireRole');
+const { sendPushNotification, getTokenDeEstudiante } = require('../services/pushNotification');
 
 // =====================
 // PROMEDIO GENERAL DEL ESTUDIANTE
@@ -154,6 +155,16 @@ router.post('/guardar', auth, requireRole('docente', 'administrador'), (req, res
             }
 
             res.json({ ok: true, id: result.insertId });
+
+            // Notificar al estudiante (fire-and-forget)
+            getTokenDeEstudiante(db, estudiante_id)
+                .then(token => sendPushNotification(
+                    token,
+                    '📊 Nota registrada',
+                    `Tu calificación: ${nota}${evaluacion ? ` — ${evaluacion}` : ''}`,
+                    { tipo: 'nueva_nota', clase_id, calificacion: nota }
+                ))
+                .catch(e => console.warn('[Push] nota:', e.message));
         }
     );
 });

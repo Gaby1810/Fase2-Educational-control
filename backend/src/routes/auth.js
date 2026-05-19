@@ -410,4 +410,29 @@ router.put("/perfil", requireAuth, (req, res) => {
     });
 });
 
+// =====================
+// GUARDAR PUSH TOKEN
+// PUT /api/auth/push-token
+// =====================
+router.put("/push-token", requireAuth, (req, res) => {
+    const { push_token } = req.body;
+    const usuarioId = req.usuario.id;
+
+    if (!push_token) {
+        return res.status(400).json({ error: "push_token es obligatorio" });
+    }
+
+    db.query(
+        "UPDATE usuarios SET push_token = ? WHERE id = ?",
+        [push_token, usuarioId],
+        (err) => {
+            if (err) {
+                console.log(err);
+                return res.status(500).json({ error: "Error al guardar push token" });
+            }
+            res.json({ ok: true });
+        }
+    );
+});
+
 module.exports = router;
