@@ -85,20 +85,11 @@ function setupGmail() {
     }
 }
 
-const preferResend =
-    EMAIL_PROVIDER === 'resend' ||
-    (EMAIL_PROVIDER !== 'gmail' && RESEND_API_KEY && (IS_RAILWAY || !GMAIL_USER));
-
-const preferGmail =
-    EMAIL_PROVIDER === 'gmail' ||
-    (!preferResend && GMAIL_USER && GMAIL_APP_PASSWORD);
-
-if (preferResend && RESEND_API_KEY) {
+// Si hay RESEND_API_KEY → Resend (salvo EMAIL_PROVIDER=gmail explícito)
+if (RESEND_API_KEY && EMAIL_PROVIDER !== 'gmail') {
     setupResend();
-} else if (preferGmail) {
+} else if (GMAIL_USER && GMAIL_APP_PASSWORD) {
     setupGmail();
-} else if (RESEND_API_KEY) {
-    setupResend();
 } else {
     console.warn('⚠️  Sin email configurado. Códigos solo en consola (modo DEV).');
     if (IS_RAILWAY) {
