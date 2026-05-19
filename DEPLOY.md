@@ -22,7 +22,11 @@ En el servicio Backend → **Variables**, conecta MySQL y define:
 | `DB_NAME` | `educationalcontrol` |
 | `JWT_SECRET` | Genera un string aleatorio largo |
 | `UPLOADS_DIR` | `/app/uploads` (si usas Volume, ver abajo) |
-| `NODE_OPTIONS` | `--dns-result-order=ipv4first` (si Gmail SMTP falla con ENETUNREACH) |
+| `RESEND_API_KEY` | API key de [resend.com](https://resend.com) (**recomendado** para correos) |
+| `EMAIL_FROM` | `EducationalControl <onboarding@resend.dev>` o dominio verificado |
+| `EMAIL_PROVIDER` | `resend` (opcional, fuerza Resend) |
+
+**Correos en Railway:** Gmail SMTP (puerto 465) suele bloquearse (`QDISC_DROP` en flujo de red). No uses solo `GMAIL_*` en producción; configura **Resend**.
 
 Railway también inyecta `PORT` automáticamente.
 

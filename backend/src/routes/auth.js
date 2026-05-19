@@ -231,8 +231,11 @@ router.post("/forgot-password", (req, res) => {
                                     codigo
                                 );
                             } catch (e) {
-                                console.log("Error email:", e.message);
-                                // Igual respondemos OK para no filtrar info
+                                console.error(
+                                    `[forgot-password] Email NO enviado a ${correo}:`,
+                                    e.message
+                                );
+                                // Respuesta genérica OK (no revelar si el correo existe)
                             }
 
                             res.json(respuestaGenerica);
