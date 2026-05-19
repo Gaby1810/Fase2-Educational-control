@@ -7,6 +7,7 @@ const fs = require('fs');
 const db = require('../db');
 const auth = require('../middleware/auth');
 const requireRole = require('../middleware/requireRole');
+const { sendPushNotification, getTokensDeEstudiantesEnClase } = require('../services/pushNotification');
 
 // =====================
 // CONFIG MULTER (compartido para crear y entregar)
@@ -342,6 +343,16 @@ router.post('/crear', auth, requireRole('docente', 'administrador'), aceptarArch
                     }
 
                     res.json({ ok: true, id: result.insertId });
+
+                    // Notificar a estudiantes inscritos (fire-and-forget)
+                    getTokensDeEstudiantesEnClase(db, clase_id)
+                        .then(tokens => sendPushNotification(
+                            tokens,
+                            '📚 Nueva tarea asignada',
+                            `${String(titulo).trim()}`,
+                            { tipo: 'nueva_tarea', clase_id, tarea_id: result.insertId }
+                        ))
+                        .catch(e => console.warn('[Push] tarea:', e.message));
                 }
             );
         }
