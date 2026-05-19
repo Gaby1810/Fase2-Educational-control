@@ -7,7 +7,10 @@
  *   3. Modo DEV     (sin nada configurado → loguea el código en consola)
  */
 
+const dns = require('dns');
 const nodemailer = require('nodemailer');
+
+dns.setDefaultResultOrder('ipv4first');
 
 const APP_NAME = process.env.APP_NAME || 'EducationalControl';
 
@@ -29,11 +32,17 @@ let remitente = '';
 if (GMAIL_USER && GMAIL_APP_PASSWORD) {
 
     transporter = nodemailer.createTransport({
-        service: 'gmail',
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true,
+        family: 4, // forzar IPv4 (evita ENETUNREACH en Railway)
         auth: {
             user: GMAIL_USER,
             pass: GMAIL_APP_PASSWORD
-        }
+        },
+        connectionTimeout: 15_000,
+        greetingTimeout: 15_000,
+        socketTimeout: 20_000
     });
 
     remitente = `${APP_NAME} <${GMAIL_USER}>`;

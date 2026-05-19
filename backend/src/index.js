@@ -1,3 +1,6 @@
+// Railway/containers: Gmail SMTP suele fallar por IPv6 (ENETUNREACH)
+require('dns').setDefaultResultOrder('ipv4first');
+
 require('dotenv').config();
 
 const express = require('express');
@@ -9,10 +12,11 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Asegurar que exista la carpeta uploads/
-const uploadsDir = path.join(__dirname, '..', 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
+const uploadsDir = require('./utils/uploadsDir');
+
+const releasesDir = path.join(__dirname, '..', 'releases');
+if (!fs.existsSync(releasesDir)) {
+    fs.mkdirSync(releasesDir, { recursive: true });
 }
 
 app.use(cors());
@@ -20,6 +24,19 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(uploadsDir));
+
+// Descarga pública del APK (colocar archivo en backend/releases/app.apk)
+const APK_FILENAME = process.env.APK_FILENAME || 'app.apk';
+app.get('/download', (req, res) => {
+    const apkPath = path.join(releasesDir, APK_FILENAME);
+    if (!fs.existsSync(apkPath)) {
+        return res.status(404).json({
+            error: 'APK no disponible',
+            hint: `Sube el archivo a releases/${APK_FILENAME} y redeploy`
+        });
+    }
+    res.download(apkPath, APK_FILENAME);
+});
 
 // Health-check público
 app.use('/api', require('./routes'));

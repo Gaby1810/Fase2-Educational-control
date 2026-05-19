@@ -13,10 +13,7 @@ const requireRole = require('../middleware/requireRole');
 // CONFIG MULTER
 // =====================
 
-const uploadsDir = path.join(__dirname, '..', '..', 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-}
+const uploadsDir = require('../utils/uploadsDir');
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, uploadsDir),

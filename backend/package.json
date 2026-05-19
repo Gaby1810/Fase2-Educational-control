@@ -5,7 +5,8 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "dev": "nodemon src/index.js"
+    "dev": "nodemon src/index.js",
+    "health-check": "node scripts/check-health.js"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
